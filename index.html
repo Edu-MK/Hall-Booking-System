@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>نظام إدارة حجوزات القاعات - إدارة الشؤون الأكاديمية والتدريب</title>
+<meta name="description" content="نظام إدارة حجوزات القاعات - إدارة الشؤون الأكاديمية والتدريب والتعليم المستمر - مستشفى الولادة والأطفال بحفر الباطن"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.1.16/umd/Recharts.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['IBM Plex Sans Arabic', 'sans-serif'] },
+      colors: {
+        primary: { 50:'#f0f9ff',100:'#e0f2fe',200:'#bae6fd',300:'#7dd3fc',400:'#38bdf8',500:'#0ea5e9',600:'#0284c7',700:'#0369a1',800:'#075985',900:'#0c4a6e' },
+        medical: { 50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d' },
+        accent: { gold:'#C9A84C', teal:'#006272' },
+        sidebar: '#0c1222',
+      }
+    }
+  }
+}
+</script>
+<style>
+* { font-family: 'IBM Plex Sans Arabic', sans-serif; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+.fade-in { animation: fadeIn 0.3s ease-in; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-badge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes progressBar { 0% { width: 0%; } 100% { width: 100%; } }
+.slide-up { animation: slideUp 0.4s ease-out; }
+.pulse-badge { animation: pulse-badge 2s infinite; }
+.card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.card-hover:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.12); }
+.gradient-bar { height: 4px; background: linear-gradient(90deg, #006272, #0ea5e9, #C9A84C); border-radius: 4px 4px 0 0; }
+.glass-card { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.2); }
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+.recharts-wrapper { direction: ltr; }
+.sidebar-gradient { background: linear-gradient(180deg, #0c1222 0%, #162032 50%, #1a2840 100%); }
+.input-modern { border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; font-size: 14px; transition: all 0.2s; outline: none; }
+.input-modern:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.1); }
+.btn-primary { background: linear-gradient(135deg, #075985, #0284c7); color: white; border-radius: 12px; padding: 10px 24px; font-weight: 600; font-size: 14px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(7,89,133,0.3); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(7,89,133,0.4); }
+.btn-primary:disabled { background: #94a3b8; box-shadow: none; transform: none; cursor: not-allowed; }
+.progress-bar { animation: progressBar 2s ease-in-out infinite; background: linear-gradient(90deg, #006272, #0ea5e9, #C9A84C); height: 3px; border-radius: 3px; }
+@media print {
+  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sidebar-gradient, aside, header, .no-print, button { display: none !important; }
+  .lg\:mr-64 { margin-right: 0 !important; }
+  main { padding: 0 !important; }
+  .card-hover:hover { transform: none !important; box-shadow: none !important; }
+  .bg-white { box-shadow: none !important; }
+  .recharts-wrapper { page-break-inside: avoid; }
+  .grid { page-break-inside: avoid; }
+  .print-show { display: block !important; }
+  @page { size: A4 landscape; margin: 1cm; }
+}
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+<div id="root"></div>
+<script type="text/babel" data-type="module">
+const { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } = React;
+const { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer, CartesianGrid } = Recharts;
+
+// ============================================================
+// LOGO SVG COMPONENT
+// ============================================================
+function LogoSVG({ size, light }) {
+  var s = size || 48;
+  var mainColor = light ? '#ffffff' : '#006272';
+  var goldColor = '#C9A84C';
+  return (
+    <svg width={s} height={s} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="56" height="56" rx="14" fill={mainColor} opacity="0.08"/>
+      <path d="M32 12L18 20v6l14-8 14 8v-6L32 12z" fill={goldColor}/>
+      <path d="M18 24v14c0 2 1 3.5 3 4.5L32 48l11-5.5c2-1 3-2.5 3-4.5V24l-14 8-14-8z" fill={mainColor} opacity="0.85"/>
+      <path d="M32 32v16" stroke={goldColor} strokeWidth="2" strokeLinecap="round"/>
+      <path d="M26 35h12" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.7"/>
+      <path d="M28 39h8" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.5"/>
+      <circle cx="32" cy="22" r="4" fill="white" opacity="0.9"/>
+      <path d="M30 21.5l1.5 1.5 3-3" stroke={mainColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="48" cy="16" r="6" fill={goldColor} opacity="0.15"/>
+      <path d="M46 16h4M48 14v4" stroke={goldColor} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+// ============================================================
+// DATA & CONSTANTS
+// ============================================================
+const RECURRING_BOOKINGS = [
+  { id: 'REC-001', nameAr: 'الاجتماع الصباحي - أطباء النساء والولادة', nameEn: 'Morning Meeting - OBS & GYN', days: [0,1,2,3,4], start: '07:30', end: '08:30', hall: 'hall-1', hallName: 'قاعة التدريب – الدور الأول', dept: 'قسم النساء والولادة', type: 'recurring' },
+  { id: 'REC-002', nameAr: 'الاجتماع الصباحي - أطباء الأطفال', nameEn: 'Morning Meeting - Pediatric', days: [0,1,2,3,4], start: '07:30', end: '08:30', hall: 'hall-2', hallName: 'قاعة التدريب – الدور الثاني', dept: 'قسم الأطفال وحديثي الولادة', type: 'recurring' },
+  { id: 'REC-003', nameAr: 'برنامج بورد النساء والولادة', nameEn: 'OBS Board Program', days: [2], start: '08:30', end: '15:30', hall: 'hall-1', hallName: 'قاعة التدريب – الدور الأول', dept: 'قسم النساء والولادة', type: 'recurring' },
+  { id: 'REC-004', nameAr: 'برنامج بورد الأطفال', nameEn: 'Pediatric Board Program', days: [2], start: '08:30', end: '15:30', hall: 'hall-2', hallName: 'قاعة التدريب – الدور الثاني', dept: 'قسم الأطفال وحديثي الولادة', type: 'recurring' }
+];
+
+const HALLS_DEFAULT = [
+  { id:'H1', name:'قاعة التدريب الرئيسية', building:'المبنى الرئيسي', floor:'الدور الأول', capacity:50, equipment:['شاشة عرض','بروجكتور','أجهزة صوت','سبورة ذكية'], available:true },
+  { id:'H2', name:'قاعة الاجتماعات 1', building:'المبنى الرئيسي', floor:'الدور الأول', capacity:20, equipment:['شاشة عرض','بروجكتور','اتصال مرئي'], available:true },
+  { id:'H3', name:'قاعة الاجتماعات 2', building:'المبنى الرئيسي', floor:'الدور الثاني', capacity:15, equipment:['شاشة عرض','بروجكتور'], available:true },
+  { id:'H4', name:'قاعة المؤتمرات', building:'المبنى الإداري', floor:'الدور الثاني', capacity:100, equipment:['شاشة عرض','بروجكتور','أجهزة صوت','اتصال مرئي','سبورة ذكية'], available:true },
+  { id:'H5', name:'قاعة ورش العمل', building:'المبنى التعليمي', floor:'الدور الأول', capacity:30, equipment:['شاشة عرض','بروجكتور','لابتوب'], available:true },
+];
+
+// ============================================================
+// ORGANIZATIONAL STRUCTURE — الهيكل التنظيمي الرسمي 2025
+// ============================================================
+var ORG_STRUCTURE = [
+  { group: 'مكتب مدير المستشفى', departments: [
+    { name: 'مدير المكتب', sections: [] },
+    { name: 'التخطيط', sections: [] },
+    { name: 'الجودة وسلامة المرضى', sections: [] },
+    { name: 'العلاقات العامة والإعلام', sections: [] },
+    { name: 'الشؤون القانونية', sections: [] },
+    { name: 'الرقابة والمراجعة الداخلية', sections: [] },
+    { name: 'إدارة الالتزام', sections: [] },
+    { name: 'مكافحة العدوى', sections: [] },
+    { name: 'تجربة المريض', sections: [] },
+    { name: 'الموارد الذاتية', sections: [] },
+    { name: 'التموين الطبي', sections: [] },
+    { name: 'إدارة التمريض', sections: [] },
+    { name: 'الصحة الإلكترونية', sections: [] },
+    { name: 'الإدارة المناوبة', sections: [] }
+  ]},
+  { group: 'مساعد مدير المستشفى للخدمات الطبية', departments: [
+    { name: 'التعليم', sections: [] },
+    { name: 'المراجعة الأكاديمية', sections: [] },
+    { name: 'الأطفال', sections: ['العناية المركزة أطفال', 'طوارئ الأطفال', 'العيادات الخارجية', 'المختبر وبنك الدم', 'مركز التأهيل الطبي والعلاج الطبيعي'] },
+    { name: 'النساء والولادة', sections: ['العناية المركزة للنساء', 'طوارئ النساء', 'جراحة الأطفال', 'الصيدلية', 'العلاج التنفسي'] },
+    { name: 'عيادة الموظفين', sections: [] },
+    { name: 'التوعية الصحية', sections: [] },
+    { name: 'الرضاعة', sections: [] },
+    { name: 'السجلات الطبية', sections: [] },
+    { name: 'العمليات والتخدير', sections: [] },
+    { name: 'الأشعة', sections: [] },
+    { name: 'الأحصاء', sections: [] },
+    { name: 'الخدمة الاجتماعية', sections: [] },
+    { name: 'إدارة الأسرة', sections: [] },
+    { name: 'الفيزياء الطبية', sections: [] },
+    { name: 'الإحالة الطبية', sections: [] },
+    { name: 'الصحة العامة', sections: [] },
+    { name: 'خدمات التغذية', sections: [] },
+    { name: 'الطب المنزلي', sections: [] },
+    { name: 'التغذية العلاجية', sections: [] }
+  ]},
+  { group: 'مساعد مدير المستشفى للموارد البشرية', departments: [
+    { name: 'خدمات الموارد البشرية', sections: [] },
+    { name: 'تخطيط الموارد', sections: [] },
+    { name: 'مراقبة الدوام', sections: [] },
+    { name: 'التواصل الداخلي', sections: [] },
+    { name: 'الشؤون الأكاديمية والتدريب والتعليم المستمر', sections: [] }
+  ]},
+  { group: 'مساعد مدير المستشفى للخدمات الإدارية والتشغيل', departments: [
+    { name: 'المالية', sections: [] },
+    { name: 'الميزانية', sections: [] },
+    { name: 'المستودعات', sections: [] },
+    { name: 'المشتريات', sections: [] },
+    { name: 'التوعية البيئية', sections: [] },
+    { name: 'الاتصالات الإدارية', sections: [] },
+    { name: 'مراقبة المخزون', sections: [] },
+    { name: 'الخدمات العامة', sections: [] },
+    { name: 'الإسكان', sections: [] },
+    { name: 'إدارة المرافق', sections: [] },
+    { name: 'الصيانة العامة', sections: [] },
+    { name: 'الأمن والسلامة', sections: [] },
+    { name: 'التجهيزات', sections: [] },
+    { name: 'الصيانة الطبية', sections: [] },
+    { name: 'الأمن الصحي', sections: [] }
+  ]}
+];
+
+// دالة مساعدة: قائمة مسطحة بجميع أسماء الإدارات (للتوافق مع الحجوزات القديمة والفلاتر)
+function getAllDeptNames() {
+  var st = ld('settings', {});
+  var custom = st.customDepartments || [];
+  var names = [];
+  ORG_STRUCTURE.forEach(function(g) {
+    g.departments.forEach(function(d) { names.push(d.name); });
+  });
+  custom.forEach(function(cd) { if (names.indexOf(cd) === -1) names.push(cd); });
+  return names;
+}
+
+// الثابت القديم للتوافق مع الحجوزات السابقة
+var DEPARTMENTS = getAllDeptNames();
+const ACTIVITY_TYPES = ['اجتماع','ورشة عمل','برنامج تدريبي','لجنة','محاضرة','ندوة','مؤتمر','فعالية'];
+const PRIORITIES = ['عاجلة','عالية','متوسطة','منخفضة'];
+const PRIORITY_COLORS = { 'عاجلة':'bg-red-100 text-red-700','عالية':'bg-orange-100 text-orange-700','متوسطة':'bg-yellow-100 text-yellow-700','منخفضة':'bg-green-100 text-green-700' };
+
+const STATUS_MAP = {
+  pending: { label:'معلق', color:'bg-amber-50 text-amber-700 border-amber-200', dot:'bg-amber-500' },
+  approved: { label:'معتمد', color:'bg-emerald-50 text-emerald-700 border-emerald-200', dot:'bg-emerald-500' },
+  rejected: { label:'مرفوض', color:'bg-red-50 text-red-700 border-red-200', dot:'bg-red-500' },
+  cancelled: { label:'ملغي', color:'bg-gray-100 text-gray-600 border-gray-200', dot:'bg-gray-500' },
+  review: { label:'قيد المراجعة', color:'bg-sky-50 text-sky-700 border-sky-200', dot:'bg-sky-500' },
+  new: { label:'جديد', color:'bg-violet-50 text-violet-700 border-violet-200', dot:'bg-violet-500' },
+};
+
+const REJECTION_REASONS = ['تعارض مع برنامج آخر','القاعة محجوزة','القاعة خارج الخدمة','البيانات غير مكتملة','الطلب مكرر','عدم استيفاء الشروط','عدم مطابقة سياسة الحجز','أخرى (يرجى التحديد)'];
+const EQUIPMENT_LIST = ['شاشة عرض','بروجكتور','أجهزة صوت','اتصال مرئي','سبورة ذكية','لابتوب'];
+const HOSPITALITY_OPTIONS = ['غير مطلوبة','قهوة وشاي','وجبة خفيفة','غداء'];
+const ROLES = ['مدير النظام','مدير الشؤون الأكاديمية','مدير التدريب','منسق التدريب','رئيس القسم','مدير الإدارة','مقدم الطلب','مسؤول القاعات','قارئ فقط'];
+const ARABIC_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const ARABIC_DAYS_SHORT = ['أحد','إثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+
+// ============================================================
+// SAMPLE DATA
+// ============================================================
+function generateSampleData() {
+  var users = [
+    { id:'U1', name:'مها المطرفي', username:'admin', password:'admin', role:'مدير النظام', department:'إدارة الشؤون الأكاديمية', email:'admin@mch.sa', active:true, lastLogin:'2026-07-08 08:30' },
+    { id:'U2', name:'سارة العتيبي', username:'academic_manager', password:'123456', role:'مدير الشؤون الأكاديمية', department:'إدارة الشؤون الأكاديمية', email:'sara@mch.sa', active:true, lastLogin:'2026-07-07 09:15' },
+    { id:'U3', name:'محمد القحطاني', username:'training_manager', password:'123456', role:'مدير التدريب', department:'إدارة الشؤون الأكاديمية', email:'mohammed@mch.sa', active:true, lastLogin:'2026-07-06 10:00' },
+    { id:'U4', name:'نورة الشمري', username:'coordinator', password:'123456', role:'منسق التدريب', department:'التعليم التمريضي', email:'noura@mch.sa', active:true, lastLogin:'2026-07-05 11:30' },
+    { id:'U5', name:'خالد الدوسري', username:'requester', password:'123456', role:'مقدم الطلب', department:'إدارة التمريض', email:'khaled@mch.sa', active:true, lastLogin:'2026-07-04 14:00' },
+  ];
+  var bookings = [
+    { id:'BK-0001', title:'برنامج التوجيه للموظفين الجدد', type:'برنامج تدريبي', priority:'عالية', department:'إدارة الشؤون الأكاديمية', section:'التدريب', organizer:'إدارة الشؤون الأكاديمية', requester:'سارة العتيبي', phone:'0551234567', email:'sara@mch.sa', hallId:'H1', date:'2026-07-08', startTime:'09:00', endTime:'12:00', attendees:35, equipment:['شاشة عرض','بروجكتور','أجهزة صوت'], hospitality:'قهوة وشاي', notes:'يرجى تجهيز القاعة قبل الموعد بساعة', status:'approved', rejectionReason:'', createdAt:'2026-07-01 08:00', updatedBy:'مها المطرفي' },
+    { id:'BK-0002', title:'اجتماع لجنة مكافحة العدوى', type:'لجنة', priority:'عاجلة', department:'إدارة مكافحة العدوى', section:'اللجان', organizer:'إدارة مكافحة العدوى', requester:'فاطمة الحربي', phone:'0559876543', email:'fatima@mch.sa', hallId:'H2', date:'2026-07-08', startTime:'13:00', endTime:'15:00', attendees:12, equipment:['شاشة عرض','اتصال مرئي'], hospitality:'قهوة وشاي', notes:'اجتماع طارئ', status:'approved', rejectionReason:'', createdAt:'2026-07-02 10:00', updatedBy:'مها المطرفي' },
+    { id:'BK-0003', title:'ورشة عمل الإنعاش القلبي الرئوي', type:'ورشة عمل', priority:'عالية', department:'التعليم التمريضي', section:'التدريب السريري', organizer:'التعليم التمريضي', requester:'نورة الشمري', phone:'0553456789', email:'noura@mch.sa', hallId:'H5', date:'2026-07-09', startTime:'08:00', endTime:'14:00', attendees:25, equipment:['شاشة عرض','بروجكتور','لابتوب'], hospitality:'وجبة خفيفة', notes:'يرجى توفير أجهزة المحاكاة', status:'approved', rejectionReason:'', createdAt:'2026-07-03 09:00', updatedBy:'مها المطرفي' },
+    { id:'BK-0004', title:'محاضرة سلامة المرضى', type:'محاضرة', priority:'متوسطة', department:'إدارة الجودة', section:'الجودة', organizer:'إدارة الجودة', requester:'عبدالله السبيعي', phone:'0557654321', email:'abdullah@mch.sa', hallId:'H4', date:'2026-07-10', startTime:'10:00', endTime:'12:00', attendees:80, equipment:['شاشة عرض','بروجكتور','أجهزة صوت','سبورة ذكية'], hospitality:'قهوة وشاي', notes:'', status:'pending', rejectionReason:'', createdAt:'2026-07-04 11:00', updatedBy:'' },
+    { id:'BK-0005', title:'اجتماع إدارة التمريض الشهري', type:'اجتماع', priority:'متوسطة', department:'إدارة التمريض', section:'التمريض', organizer:'إدارة التمريض', requester:'خالد الدوسري', phone:'0552345678', email:'khaled@mch.sa', hallId:'H2', date:'2026-07-10', startTime:'09:00', endTime:'11:00', attendees:18, equipment:['شاشة عرض','بروجكتور'], hospitality:'غير مطلوبة', notes:'', status:'pending', rejectionReason:'', createdAt:'2026-07-04 14:00', updatedBy:'' },
+    { id:'BK-0006', title:'ندوة التغذية العلاجية', type:'ندوة', priority:'منخفضة', department:'إدارة التغذية', section:'التغذية', organizer:'إدارة التغذية', requester:'ريم الغامدي', phone:'0558765432', email:'reem@mch.sa', hallId:'H4', date:'2026-07-12', startTime:'09:00', endTime:'13:00', attendees:60, equipment:['شاشة عرض','بروجكتور','أجهزة صوت'], hospitality:'وجبة خفيفة', notes:'ندوة مفتوحة لجميع الأقسام', status:'pending', rejectionReason:'', createdAt:'2026-07-05 08:30', updatedBy:'' },
+    { id:'BK-0007', title:'برنامج تدريب الإنعاش المتقدم', type:'برنامج تدريبي', priority:'عاجلة', department:'قسم العناية المركزة للأطفال', section:'العناية المركزة', organizer:'قسم العناية المركزة للأطفال', requester:'هند المطيري', phone:'0554567890', email:'hind@mch.sa', hallId:'H1', date:'2026-07-11', startTime:'08:00', endTime:'16:00', attendees:20, equipment:['شاشة عرض','بروجكتور','أجهزة صوت','لابتوب'], hospitality:'غداء', notes:'برنامج يومين متتاليين', status:'pending', rejectionReason:'', createdAt:'2026-07-05 10:00', updatedBy:'' },
+    { id:'BK-0008', title:'اجتماع الموارد البشرية', type:'اجتماع', priority:'متوسطة', department:'إدارة الموارد البشرية', section:'الموارد البشرية', organizer:'إدارة الموارد البشرية', requester:'سلطان العنزي', phone:'0556789012', email:'sultan@mch.sa', hallId:'H3', date:'2026-07-09', startTime:'10:00', endTime:'12:00', attendees:10, equipment:['شاشة عرض'], hospitality:'قهوة وشاي', notes:'', status:'pending', rejectionReason:'', createdAt:'2026-07-06 09:00', updatedBy:'' },
+    { id:'BK-0009', title:'ورشة عمل تطوير المهارات القيادية', type:'ورشة عمل', priority:'عالية', department:'إدارة المستشفى', section:'الإدارة', organizer:'إدارة المستشفى', requester:'مها المطرفي', phone:'0551112233', email:'admin@mch.sa', hallId:'H4', date:'2026-07-15', startTime:'09:00', endTime:'15:00', attendees:40, equipment:['شاشة عرض','بروجكتور','أجهزة صوت','سبورة ذكية'], hospitality:'غداء', notes:'للمدراء ورؤساء الأقسام', status:'review', rejectionReason:'', createdAt:'2026-07-06 11:00', updatedBy:'' },
+    { id:'BK-0010', title:'لقاء تعريفي بنظام الجودة الجديد', type:'محاضرة', priority:'عالية', department:'إدارة الجودة', section:'الجودة', organizer:'إدارة الجودة', requester:'عبدالله السبيعي', phone:'0557654321', email:'abdullah@mch.sa', hallId:'H1', date:'2026-06-25', startTime:'10:00', endTime:'12:00', attendees:45, equipment:['شاشة عرض','بروجكتور','أجهزة صوت'], hospitality:'قهوة وشاي', notes:'', status:'rejected', rejectionReason:'تعارض مع برنامج آخر', createdAt:'2026-06-20 08:00', updatedBy:'مها المطرفي' },
+    { id:'BK-0011', title:'اجتماع لجنة السلامة', type:'لجنة', priority:'عاجلة', department:'إدارة الجودة', section:'السلامة', organizer:'إدارة الجودة', requester:'منى الزهراني', phone:'0559988776', email:'mona@mch.sa', hallId:'H2', date:'2026-06-28', startTime:'13:00', endTime:'15:00', attendees:15, equipment:['شاشة عرض','اتصال مرئي'], hospitality:'قهوة وشاي', notes:'', status:'rejected', rejectionReason:'القاعة محجوزة', createdAt:'2026-06-22 10:00', updatedBy:'مها المطرفي' },
+    { id:'BK-0012', title:'دورة مهارات التواصل', type:'برنامج تدريبي', priority:'متوسطة', department:'إدارة الموارد البشرية', section:'التطوير', organizer:'إدارة الموارد البشرية', requester:'سلطان العنزي', phone:'0556789012', email:'sultan@mch.sa', hallId:'H5', date:'2026-06-30', startTime:'09:00', endTime:'14:00', attendees:28, equipment:['شاشة عرض','بروجكتور','لابتوب'], hospitality:'وجبة خفيفة', notes:'', status:'rejected', rejectionReason:'البيانات غير مكتملة', createdAt:'2026-06-24 09:00', updatedBy:'مها المطرفي' },
+    { id:'BK-0013', title:'فعالية اليوم العالمي للتمريض', type:'فعالية', priority:'عالية', department:'إدارة التمريض', section:'التمريض', organizer:'إدارة التمريض', requester:'خالد الدوسري', phone:'0552345678', email:'khaled@mch.sa', hallId:'H4', date:'2026-06-20', startTime:'08:00', endTime:'14:00', attendees:90, equipment:['شاشة عرض','بروجكتور','أجهزة صوت','سبورة ذكية','اتصال مرئي'], hospitality:'غداء', notes:'فعالية سنوية', status:'cancelled', rejectionReason:'', createdAt:'2026-06-10 08:00', updatedBy:'خالد الدوسري' },
+    { id:'BK-0014', title:'اجتماع الإدارة المناوبة', type:'اجتماع', priority:'منخفضة', department:'الإدارة المناوبة', section:'المناوبات', organizer:'الإدارة المناوبة', requester:'ياسر الشهري', phone:'0553344556', email:'yaser@mch.sa', hallId:'H3', date:'2026-06-22', startTime:'14:00', endTime:'16:00', attendees:8, equipment:['شاشة عرض'], hospitality:'غير مطلوبة', notes:'', status:'cancelled', rejectionReason:'', createdAt:'2026-06-15 14:00', updatedBy:'ياسر الشهري' },
+    { id:'BK-0015', title:'مؤتمر طب الأطفال السنوي', type:'مؤتمر', priority:'عاجلة', department:'إدارة المستشفى', section:'الطب', organizer:'إدارة المستشفى', requester:'مها المطرفي', phone:'0551112233', email:'admin@mch.sa', hallId:'H4', date:'2026-07-20', startTime:'08:00', endTime:'16:00', attendees:95, equipment:['شاشة عرض','بروجكتور','أجهزة صوت','اتصال مرئي','سبورة ذكية'], hospitality:'غداء', notes:'مؤتمر سنوي - يومين', status:'review', rejectionReason:'', createdAt:'2026-07-01 08:00', updatedBy:'' },
+    { id:'BK-0016', title:'ورشة عمل التوثيق الطبي', type:'ورشة عمل', priority:'متوسطة', department:'إدارة الجودة', section:'التوثيق', organizer:'إدارة الجودة', requester:'عبدالله السبيعي', phone:'0557654321', email:'abdullah@mch.sa', hallId:'H1', date:'2026-07-08', startTime:'10:00', endTime:'13:00', attendees:30, equipment:['شاشة عرض','بروجكتور'], hospitality:'قهوة وشاي', notes:'', status:'pending', rejectionReason:'', createdAt:'2026-07-07 08:00', updatedBy:'' },
+  ];
+  var auditLog = [
+    { id:1, timestamp:'2026-07-08 08:30', action:'تسجيل دخول', bookingId:'-', user:'مها المطرفي', role:'مدير النظام', details:'تسجيل دخول ناجح', ip:'10.0.1.50' },
+    { id:2, timestamp:'2026-07-01 08:05', action:'إنشاء', bookingId:'BK-0001', user:'سارة العتيبي', role:'مدير الشؤون الأكاديمية', details:'إنشاء حجز جديد: برنامج التوجيه للموظفين الجدد', ip:'10.0.1.51' },
+    { id:3, timestamp:'2026-07-01 09:00', action:'اعتماد', bookingId:'BK-0001', user:'مها المطرفي', role:'مدير النظام', details:'اعتماد الحجز BK-0001', ip:'10.0.1.50' },
+    { id:4, timestamp:'2026-07-02 10:00', action:'إنشاء', bookingId:'BK-0002', user:'فاطمة الحربي', role:'مقدم الطلب', details:'إنشاء حجز جديد: اجتماع لجنة مكافحة العدوى', ip:'10.0.1.52' },
+    { id:5, timestamp:'2026-07-02 10:30', action:'اعتماد', bookingId:'BK-0002', user:'مها المطرفي', role:'مدير النظام', details:'اعتماد الحجز BK-0002', ip:'10.0.1.50' },
+    { id:6, timestamp:'2026-07-03 09:00', action:'إنشاء', bookingId:'BK-0003', user:'نورة الشمري', role:'منسق التدريب', details:'إنشاء حجز جديد: ورشة عمل الإنعاش القلبي الرئوي', ip:'10.0.1.53' },
+    { id:7, timestamp:'2026-07-03 09:30', action:'اعتماد', bookingId:'BK-0003', user:'مها المطرفي', role:'مدير النظام', details:'اعتماد الحجز BK-0003', ip:'10.0.1.50' },
+    { id:8, timestamp:'2026-07-04 11:00', action:'إنشاء', bookingId:'BK-0004', user:'عبدالله السبيعي', role:'مقدم الطلب', details:'إنشاء حجز جديد: محاضرة سلامة المرضى', ip:'10.0.1.54' },
+    { id:9, timestamp:'2026-07-04 14:00', action:'إنشاء', bookingId:'BK-0005', user:'خالد الدوسري', role:'مقدم الطلب', details:'إنشاء حجز جديد: اجتماع إدارة التمريض الشهري', ip:'10.0.1.55' },
+    { id:10, timestamp:'2026-07-05 08:30', action:'إنشاء', bookingId:'BK-0006', user:'ريم الغامدي', role:'مقدم الطلب', details:'إنشاء حجز جديد: ندوة التغذية العلاجية', ip:'10.0.1.56' },
+    { id:11, timestamp:'2026-07-05 10:00', action:'إنشاء', bookingId:'BK-0007', user:'هند المطيري', role:'مقدم الطلب', details:'إنشاء حجز جديد: برنامج تدريب الإنعاش المتقدم', ip:'10.0.1.57' },
+    { id:12, timestamp:'2026-06-20 08:00', action:'رفض', bookingId:'BK-0010', user:'مها المطرفي', role:'مدير النظام', details:'رفض الحجز BK-0010 - السبب: تعارض مع برنامج آخر', ip:'10.0.1.50' },
+    { id:13, timestamp:'2026-06-22 10:00', action:'رفض', bookingId:'BK-0011', user:'مها المطرفي', role:'مدير النظام', details:'رفض الحجز BK-0011 - السبب: القاعة محجوزة', ip:'10.0.1.50' },
+    { id:14, timestamp:'2026-06-24 09:00', action:'رفض', bookingId:'BK-0012', user:'مها المطرفي', role:'مدير النظام', details:'رفض الحجز BK-0012 - السبب: البيانات غير مكتملة', ip:'10.0.1.50' },
+    { id:15, timestamp:'2026-06-10 08:00', action:'إلغاء', bookingId:'BK-0013', user:'خالد الدوسري', role:'مقدم الطلب', details:'إلغاء الحجز BK-0013', ip:'10.0.1.55' },
+    { id:16, timestamp:'2026-06-15 14:00', action:'إلغاء', bookingId:'BK-0014', user:'ياسر الشهري', role:'مقدم الطلب', details:'إلغاء الحجز BK-0014', ip:'10.0.1.58' },
+    { id:17, timestamp:'2026-07-06 09:00', action:'إنشاء', bookingId:'BK-0008', user:'سلطان العنزي', role:'مقدم الطلب', details:'إنشاء حجز جديد: اجتماع الموارد البشرية', ip:'10.0.1.59' },
+    { id:18, timestamp:'2026-07-06 11:00', action:'إنشاء', bookingId:'BK-0009', user:'مها المطرفي', role:'مدير النظام', details:'إنشاء حجز جديد: ورشة عمل تطوير المهارات القيادية', ip:'10.0.1.50' },
+    { id:19, timestamp:'2026-07-06 11:30', action:'مراجعة', bookingId:'BK-0009', user:'مها المطرفي', role:'مدير النظام', details:'تحويل الحجز BK-0009 إلى قيد المراجعة', ip:'10.0.1.50' },
+    { id:20, timestamp:'2026-07-07 08:00', action:'إنشاء', bookingId:'BK-0016', user:'عبدالله السبيعي', role:'مقدم الطلب', details:'إنشاء حجز جديد: ورشة عمل التوثيق الطبي', ip:'10.0.1.54' },
+    { id:21, timestamp:'2026-07-01 08:00', action:'إنشاء', bookingId:'BK-0015', user:'مها المطرفي', role:'مدير النظام', details:'إنشاء حجز جديد: مؤتمر طب الأطفال السنوي', ip:'10.0.1.50' },
+    { id:22, timestamp:'2026-07-07 16:00', action:'تعديل', bookingId:'-', user:'النظام', role:'النظام', details:'إرسال تذكيرات للحجوزات القادمة', ip:'10.0.0.1' },
+  ];
+  var notifications = [
+    { id:1, message:'تم إنشاء حجز جديد BK-0016: ورشة عمل التوثيق الطبي', timestamp:'2026-07-07 08:00', read:false, type:'new' },
+    { id:2, message:'تنبيه: يوجد تعارض محتمل في قاعة التدريب الرئيسية يوم 2026-07-08', timestamp:'2026-07-07 08:05', read:false, type:'conflict' },
+    { id:3, message:'حجز BK-0009 قيد المراجعة: ورشة عمل تطوير المهارات القيادية', timestamp:'2026-07-06 11:30', read:false, type:'review' },
+    { id:4, message:'تم إنشاء حجز جديد BK-0008: اجتماع الموارد البشرية', timestamp:'2026-07-06 09:00', read:true, type:'new' },
+    { id:5, message:'تم اعتماد الحجز BK-0003: ورشة عمل الإنعاش القلبي الرئوي', timestamp:'2026-07-03 09:30', read:true, type:'approved' },
+    { id:6, message:'تم اعتماد الحجز BK-0002: اجتماع لجنة مكافحة العدوى', timestamp:'2026-07-02 10:30', read:true, type:'approved' },
+    { id:7, message:'تم اعتماد الحجز BK-0001: برنامج التوجيه للموظفين الجدد', timestamp:'2026-07-01 09:00', read:true, type:'approved' },
+    { id:8, message:'تذكير: برنامج التوجيه للموظفين الجدد غداً الساعة 09:00', timestamp:'2026-07-07 16:00', read:false, type:'reminder' },
+    { id:9, message:'تم رفض الحجز BK-0010: تعارض مع برنامج آخر', timestamp:'2026-06-20 08:00', read:true, type:'rejected' },
+    { id:10, message:'تم إلغاء الحجز BK-0013: فعالية اليوم العالمي للتمريض', timestamp:'2026-06-10 08:00', read:true, type:'cancelled' },
+    { id:11, message:'5 حجوزات معلقة بانتظار الاعتماد', timestamp:'2026-07-07 17:00', read:false, type:'pending' },
+  ];
+  return { users:users, bookings:bookings, halls: HALLS_DEFAULT, auditLog:auditLog, notifications:notifications };
+}
+
+// ============================================================
+// GOOGLE SHEETS INTEGRATION
+// ============================================================
+var SHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRP6tM_SFpMioRvO__YfffZmmTe9RpcIGs4MUT3Dh-WcGOrBgPKGO_daewQNmXBTEA7nCR_pVVls-_1/pub';
+var SHEET_GIDS = { Rooms: 513029132, Bookings: 1894244704, Fixed_Activities: 303685748, Users: 521933182, Audit_Log: 1510460491 };
+var _sheetConnectionStatus = { connected: false, lastUpdate: null, loading: false };
+
+function parseCSV(text) {
+  var lines = text.split('\n');
+  if (lines.length < 2) return [];
+  var headerLine = lines[0]; var headers = []; var inQuote = false; var field = '';
+  for (var ci = 0; ci < headerLine.length; ci++) {
+    var ch = headerLine[ci];
+    if (ch === '"') { inQuote = !inQuote; }
+    else if (ch === ',' && !inQuote) { headers.push(field.trim()); field = ''; }
+    else { field += ch; }
+  }
+  headers.push(field.trim());
+  var results = [];
+  for (var li = 1; li < lines.length; li++) {
+    var line = lines[li]; if (!line.trim()) continue;
+    var fields = []; inQuote = false; field = '';
+    for (var ci2 = 0; ci2 < line.length; ci2++) {
+      var ch2 = line[ci2];
+      if (ch2 === '"') { if (inQuote && ci2 + 1 < line.length && line[ci2 + 1] === '"') { field += '"'; ci2++; } else { inQuote = !inQuote; } }
+      else if (ch2 === ',' && !inQuote) { fields.push(field); field = ''; }
+      else { field += ch2; }
+    }
+    fields.push(field);
+    var obj = {};
+    for (var fi = 0; fi < headers.length; fi++) { obj[headers[fi]] = fi < fields.length ? fields[fi].trim() : ''; }
+    results.push(obj);
+  }
+  return results;
+}
+
+function buildSheetURL(gid) { return SHEET_BASE_URL + '?gid=' + gid + '&single=true&output=csv'; }
+
+function fetchSheetData() {
+  _sheetConnectionStatus.loading = true;
+  var keys = Object.keys(SHEET_GIDS);
+  var promises = keys.map(function(key) {
+    return fetch(buildSheetURL(SHEET_GIDS[key])).then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.text(); }).then(function(text) { return { key: key, data: parseCSV(text) }; });
+  });
+  return Promise.all(promises).then(function(results) {
+    var out = {}; results.forEach(function(r) { out[r.key] = r.data; });
+    _sheetConnectionStatus.connected = true;
+    _sheetConnectionStatus.lastUpdate = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+    _sheetConnectionStatus.loading = false; return out;
+  }).catch(function(err) { _sheetConnectionStatus.connected = false; _sheetConnectionStatus.loading = false; console.error('Sheet fetch error:', err); throw err; });
+}
+
+function mapRoomsToHalls(rooms) {
+  return rooms.filter(function(r) { return r.Room_ID && r.Room_Name; }).map(function(r) {
+    var name = r.Room_Name || ''; var floorGuess = 'الدور الأول';
+    if (name.indexOf('الثاني') !== -1 || name.indexOf('ثاني') !== -1 || name.indexOf('Second') !== -1) floorGuess = 'الدور الثاني';
+    if (name.indexOf('الثالث') !== -1 || name.indexOf('ثالث') !== -1) floorGuess = 'الدور الثالث';
+    return { id: r.Room_ID, name: r.Room_Name, building: 'المبنى الرئيسي', floor: floorGuess, capacity: parseInt(r.Capacity) || 30, equipment: [], available: (r.Status || '').toLowerCase() === 'active' || (r.Status || '') === 'متاحة' || (r.Status || '') === '' };
+  });
+}
+function mapPriorityNum(p) { var n = parseInt(p); if (n === 1) return 'عاجلة'; if (n === 2) return 'عالية'; if (n === 3) return 'متوسطة'; if (n === 4) return 'منخفضة'; return p || 'متوسطة'; }
+function mapBookings(bookings) {
+  return bookings.filter(function(b) { return b.Booking_ID; }).map(function(b) {
+    var statusRaw = (b.Status || '').toLowerCase().trim(); var status = 'pending';
+    if (statusRaw === 'approved' || statusRaw === 'معتمد') status = 'approved';
+    else if (statusRaw === 'pending' || statusRaw === 'معلق') status = 'pending';
+    else if (statusRaw === 'rejected' || statusRaw === 'مرفوض') status = 'rejected';
+    else if (statusRaw === 'cancelled' || statusRaw === 'ملغي') status = 'cancelled';
+    else if (statusRaw === 'review' || statusRaw === 'قيد المراجعة') status = 'review';
+    else if (statusRaw === 'new' || statusRaw === 'جديد') status = 'new';
+    return { id: b.Booking_ID, title: b.Activity_Name || '', type: b.Activity_Type || 'اجتماع', priority: mapPriorityNum(b.Priority), department: b.Department || '', section: '', organizer: '', requester: b.Requester || '', phone: '', email: '', hallId: b.Room_ID || '', date: b.Date || '', startTime: b.Start_Time || '', endTime: b.End_Time || '', attendees: parseInt(b.Attendees) || 0, equipment: [], hospitality: 'غير مطلوبة', notes: b.Notes || '', status: status, rejectionReason: '', createdAt: b.Created_At || '', updatedBy: '' };
+  });
+}
+function mapAuditLog(logs) {
+  return logs.filter(function(l) { return l.Timestamp; }).map(function(l, idx) {
+    var actionRaw = (l.Action || '').trim(); var action = actionRaw;
+    if (actionRaw === 'ADD') action = 'إنشاء'; else if (actionRaw === 'UPDATE_STATUS') action = 'تعديل'; else if (actionRaw === 'SETUP') action = 'إعداد'; else if (actionRaw === 'APPROVE') action = 'اعتماد'; else if (actionRaw === 'REJECT') action = 'رفض'; else if (actionRaw === 'CANCEL') action = 'إلغاء';
+    var ts = (l.Timestamp || '').replace('T', ' '); if (ts.length > 16) ts = ts.substring(0, 16);
+    return { id: idx + 1, timestamp: ts, action: action, bookingId: l.Target_ID || '-', user: l.User || '', role: '', details: l.Details || '', ip: '' };
+  });
+}
+function mapUsers(users) {
+  return users.filter(function(u) { return u.User_Name; }).map(function(u, idx) {
+    var roleRaw = (u.Role || '').toLowerCase().trim(); var role = 'مقدم الطلب';
+    if (roleRaw === 'admin' || roleRaw === 'مدير النظام') role = 'مدير النظام';
+    else if (roleRaw === 'approver' || roleRaw === 'مسؤول الموافقات') role = 'مدير الشؤون الأكاديمية';
+    else if (roleRaw === 'viewer' || roleRaw === 'قارئ فقط') role = 'قارئ فقط';
+    return { id: 'U' + (idx + 1), name: u.User_Name, username: (u.Email || '').split('@')[0] || ('user' + (idx + 1)), password: '123456', role: role, department: u.Department || '', email: u.Email || '', active: true, lastLogin: '-' };
+  });
+}
+
+// ============================================================
+// STORAGE
+// ============================================================
+function ld(key, fb) { try { var d = localStorage.getItem('mch_' + key); return d ? JSON.parse(d) : fb; } catch(e) { return fb; } }
+function sv(key, data) { localStorage.setItem('mch_' + key, JSON.stringify(data)); }
+
+function initDataFromSheet() {
+  return fetchSheetData().then(function(sheets) {
+    var halls = sheets.Rooms ? mapRoomsToHalls(sheets.Rooms) : [];
+    var bookings = sheets.Bookings ? mapBookings(sheets.Bookings) : [];
+    var auditLog = sheets.Audit_Log ? mapAuditLog(sheets.Audit_Log) : [];
+    var users = sheets.Users ? mapUsers(sheets.Users) : [];
+    if (halls.length > 0) sv('halls', halls);
+    if (bookings.length > 0) sv('bookings', bookings);
+    if (auditLog.length > 0) sv('auditLog', auditLog);
+    if (users.length > 0) {
+      var existingUsers = ld('users', []);
+      users = users.map(function(su) {
+        var existing = existingUsers.find(function(eu) { return eu.username === su.username || eu.email === su.email; });
+        if (existing && existing.password) { su.password = existing.password; su.lastLogin = existing.lastLogin || su.lastLogin; }
+        return su;
+      });
+      var adminUser = existingUsers.find(function(u) { return u.username === 'admin'; });
+      if (adminUser) {
+        var hasAdmin = users.find(function(u) { return u.username === 'admin'; });
+        if (!hasAdmin) users.unshift(adminUser);
+        else { hasAdmin.password = adminUser.password; hasAdmin.name = adminUser.name; hasAdmin.role = adminUser.role; }
+      }
+      sv('users', users);
+    }
+    sv('settings', { systemName:'نظام إدارة حجوزات القاعات', hospitalName:'مستشفى الولادة والأطفال - حفر الباطن', departments: getAllDeptNames(), activityTypes: ACTIVITY_TYPES, rejectionReasons: REJECTION_REASONS });
+    sv('sheetLastSync', new Date().toISOString());
+    localStorage.setItem('mch_init', '1');
+    return true;
+  });
+}
+
+function initData() {
+  if (!localStorage.getItem('mch_init')) {
+    var s = generateSampleData();
+    sv('users', s.users); sv('bookings', s.bookings); sv('halls', s.halls);
+    sv('auditLog', s.auditLog); sv('notifications', s.notifications);
+    sv('settings', { systemName:'نظام إدارة حجوزات القاعات', hospitalName:'مستشفى الولادة والأطفال - حفر الباطن', departments: getAllDeptNames(), activityTypes: ACTIVITY_TYPES, rejectionReasons: REJECTION_REASONS });
+    localStorage.setItem('mch_init', '1');
+  } else {
+    var users = ld('users', []);
+    var hasAdmin = users.find(function(u) { return u.username === 'admin'; });
+    if (!hasAdmin) {
+      users.unshift({ id:'U1', name:'مها المطرفي', username:'admin', password:'admin', role:'مدير النظام', department:'إدارة الشؤون الأكاديمية', email:'admin@mch.sa', active:true, lastLogin:'-' });
+      sv('users', users);
+    } else if (hasAdmin.password !== 'admin') {
+      hasAdmin.password = 'admin'; hasAdmin.name = 'مها المطرفي'; hasAdmin.role = 'مدير النظام'; hasAdmin.active = true;
+      sv('users', users);
+    }
+  }
+}
+initData();
+
+function addLog(action, bid, user, role, details) {
+  var logs = ld('auditLog', []);
+  logs.unshift({ id: Date.now(), timestamp: new Date().toISOString().replace('T',' ').substring(0,16), action:action, bookingId: bid||'-', user:user, role:role, details:details, ip:'10.0.'+Math.floor(Math.random()*255)+'.'+Math.floor(Math.random()*255) });
+  sv('auditLog', logs);
+}
+function addNotif(message, type) {
+  var n = ld('notifications', []);
+  n.unshift({ id: Date.now(), message:message, timestamp: new Date().toISOString().replace('T',' ').substring(0,16), read:false, type:type });
+  sv('notifications', n);
+}
+function genId() {
+  var bk = ld('bookings', []);
+  var mx = bk.reduce(function(m, b) { var n = parseInt(b.id.replace('BK-','')); return n > m ? n : m; }, 0);
+  return 'BK-' + String(mx + 1).padStart(4, '0');
+}
+
+// ============================================================
+// ICONS
+// ============================================================
+var I = {
+  dash: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>; },
+  cal: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>; },
+  plus: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>; },
+  clip: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>; },
+  bld: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>; },
+  chart: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>; },
+  doc: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>; },
+  usr: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M16.5 3.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>; },
+  cog: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>; },
+  out: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>; },
+  bell: function(c) { c=c||'currentColor'; return <svg className="w-5 h-5" fill="none" stroke={c} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>; },
+  menu: function() { return <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>; },
+  x: function() { return <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>; },
+  srch: function() { return <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>; },
+  dl: function() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>; },
+  chL: function() { return <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>; },
+  chR: function() { return <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>; },
+};
+
+var AppCtx = createContext();
+
+// ============================================================
+// MODAL
+// ============================================================
+function Modal({ isOpen, onClose, title, children, wide }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div className={"relative bg-white rounded-2xl shadow-2xl w-full " + (wide ? 'max-w-2xl' : 'max-w-lg') + " max-h-[90vh] overflow-y-auto slide-up"} onClick={function(e){e.stopPropagation();}}>
+        <div className="gradient-bar"></div>
+        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">{I.x()}</button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// LOGIN MODAL (hidden access)
+// ============================================================
+function LoginModal({ isOpen, onClose }) {
+  var ctx = useContext(AppCtx);
+  var loginFn = ctx.login;
+  var _s1 = useState(''); var un = _s1[0]; var setUn = _s1[1];
+  var _s2 = useState(''); var pw = _s2[0]; var setPw = _s2[1];
+  var _s3 = useState(false); var rem = _s3[0]; var setRem = _s3[1];
+  var _s4 = useState(''); var err = _s4[0]; var setErr = _s4[1];
+  var go = function(e) {
+    e.preventDefault(); setErr('');
+    var u = ld('users', []).find(function(user) { return user.username === un && user.password === pw && user.active; });
+    if (u) { loginFn(u, rem); if (onClose) onClose(); }
+    else setErr('بيانات الدخول غير صحيحة');
+  };
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="تسجيل الدخول">
+      <div className="text-center mb-6">
+        <div className="mx-auto mb-3"><LogoSVG size={56} /></div>
+        <h2 className="text-base font-bold text-slate-800">لوحة إدارة النظام</h2>
+        <p className="text-xs text-slate-400 mt-1">الوصول مخصص للمسؤولين فقط</p>
+      </div>
+      <form onSubmit={go} className="space-y-4">
+        <div><label className="block text-sm font-medium text-slate-600 mb-1.5">اسم المستخدم</label><input type="text" value={un} onChange={function(e){setUn(e.target.value);}} className="input-modern w-full" placeholder="أدخل اسم المستخدم" required/></div>
+        <div><label className="block text-sm font-medium text-slate-600 mb-1.5">كلمة المرور</label><input type="password" value={pw} onChange={function(e){setPw(e.target.value);}} className="input-modern w-full" placeholder="أدخل كلمة المرور" required/></div>
+        <div className="flex items-center gap-2"><input type="checkbox" id="rem" checked={rem} onChange={function(e){setRem(e.target.checked);}} className="w-4 h-4 text-primary-600 rounded"/><label htmlFor="rem" className="text-sm text-slate-500">تذكرني</label></div>
+        {err && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl border border-red-100">{err}</div>}
+        <button type="submit" className="btn-primary w-full">تسجيل الدخول</button>
+      </form>
+    </Modal>
+  );
+}
+
+// ============================================================
+// HOME PAGE (redesigned)
+// ============================================================
+function HomePage() {
+  var bookings = ld('bookings', []);
+  var approved = bookings.filter(function(b) { return b.status === 'approved'; });
+  var pending = bookings.filter(function(b) { return b.status === 'pending' || b.status === 'new'; });
+  var halls = ld('halls', HALLS_DEFAULT);
+  var ctx = useContext(AppCtx);
+  var navFn = ctx.nav;
+  var services = [
+    { id:'new-booking', icon:'📝', title:'حجز جديد', desc:'تقديم طلب حجز قاعة', color:'from-sky-500 to-blue-600' },
+    { id:'calendar', icon:'📅', title:'التقويم', desc:'عرض جدول الحجوزات', color:'from-violet-500 to-purple-600' },
+    { id:'approved-bookings', icon:'✅', title:'الحجوزات المعتمدة', desc:'استعراض الحجوزات المؤكدة', color:'from-emerald-500 to-green-600' },
+    { id:'search', icon:'🔍', title:'البحث عن قاعة', desc:'البحث عن قاعة متاحة', color:'from-amber-500 to-orange-600' },
+  ];
+  return (
+    <div className="space-y-8 slide-up">
+      <div className="text-center py-8">
+        <div className="mx-auto mb-4"><LogoSVG size={80} /></div>
+        <h1 className="text-2xl lg:text-3xl font-bold text-slate-800 mb-2">نظام إدارة حجوزات القاعات</h1>
+        <p className="text-sm text-accent-teal font-semibold mb-1">إدارة الشؤون الأكاديمية والتدريب والتعليم المستمر</p>
+        <p className="text-xs text-slate-400">مستشفى الولادة والأطفال — حفر الباطن</p>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {services.map(function(s) { return (
+          <button key={s.id} onClick={function(){navFn(s.id);}} className="bg-white rounded-2xl border border-slate-100 p-5 text-center card-hover group">
+            <div className={"w-14 h-14 rounded-2xl bg-gradient-to-br " + s.color + " flex items-center justify-center mx-auto mb-3 text-2xl shadow-lg group-hover:scale-110 transition-transform"}>{s.icon}</div>
+            <h3 className="font-bold text-slate-800 text-sm mb-1">{s.title}</h3>
+            <p className="text-xs text-slate-400">{s.desc}</p>
+          </button>
+        ); })}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 card-hover"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><p className="text-xs text-slate-400 font-medium">الحجوزات المعتمدة</p><p className="text-3xl font-bold text-emerald-600 mt-2">{approved.length}</p><p className="text-[10px] text-slate-400 mt-1">Approved Bookings</p></div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 card-hover"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><p className="text-xs text-slate-400 font-medium">القاعات المتاحة</p><p className="text-3xl font-bold text-sky-600 mt-2">{halls.filter(function(h){return h.available;}).length}</p><p className="text-[10px] text-slate-400 mt-1">Available Halls</p></div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 card-hover"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><p className="text-xs text-slate-400 font-medium">بانتظار الاعتماد</p><p className="text-3xl font-bold text-amber-600 mt-2">{pending.length}</p><p className="text-[10px] text-slate-400 mt-1">Pending Approval</p></div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// APPROVED BOOKINGS
+// ============================================================
+function ApprovedBookingsPage() {
+  var bookings = ld('bookings', []).filter(function(b) { return b.status === 'approved'; }).sort(function(a,b){ return b.date.localeCompare(a.date); });
+  var halls = ld('halls', HALLS_DEFAULT);
+  return (
+    <div className="space-y-4 slide-up">
+      <h2 className="text-lg font-bold text-slate-800">الحجوزات المعتمدة</h2>
+      {bookings.length === 0 && <div className="bg-white rounded-2xl p-8 text-center text-slate-400 border border-slate-100">لا توجد حجوزات معتمدة حالياً</div>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{bookings.map(function(b){ var h = halls.find(function(x){return x.id === b.hallId;}); return (<div key={b.id} className="bg-white rounded-2xl border border-slate-100 p-5 card-hover"><div className="gradient-bar mb-3" style={{width:'100%'}}></div><div className="flex items-center justify-between mb-2"><span className="font-mono text-primary-700 text-sm font-semibold">{b.id}</span><span className="px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-700 font-medium">معتمد ✓</span></div><h3 className="font-bold text-slate-800 mb-2">{b.title}</h3><p className="text-sm text-slate-500">{h && h.name ? h.name : '-'} | {b.date} | {b.startTime} - {b.endTime}</p><p className="text-xs text-slate-400 mt-1">{b.department}</p></div>); })}</div>
+    </div>
+  );
+}
+
+// ============================================================
+// SEARCH PAGE
+// ============================================================
+function SearchPage() {
+  var halls = ld('halls', HALLS_DEFAULT);
+  var bookings = ld('bookings', []);
+  var _s1 = useState(''); var q = _s1[0]; var setQ = _s1[1];
+  var _s2 = useState(''); var date = _s2[0]; var setDate = _s2[1];
+  var res = halls.filter(function(h){ return h.available && (!q || h.name.indexOf(q) !== -1 || h.floor.indexOf(q) !== -1 || h.building.indexOf(q) !== -1); });
+  var busy = function(hid){ return date ? bookings.filter(function(b){ return b.hallId === hid && b.date === date && (b.status === 'approved' || b.status === 'pending' || b.status === 'review'); }).length : 0; };
+  return (
+    <div className="space-y-5 slide-up">
+      <div className="bg-white rounded-2xl border border-slate-100 p-5"><h2 className="font-bold text-slate-800 mb-4">البحث عن قاعة متاحة</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-3"><input value={q} onChange={function(e){setQ(e.target.value);}} placeholder="اسم القاعة أو الدور" className="input-modern"/><input type="date" value={date} onChange={function(e){setDate(e.target.value);}} className="input-modern"/></div></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">{res.map(function(h){ var b = busy(h.id); return (<div key={h.id} className="bg-white rounded-2xl border border-slate-100 p-5 card-hover"><div className="gradient-bar mb-3" style={{width:'100%'}}></div><h3 className="font-bold text-slate-800">{h.name}</h3><p className="text-sm text-slate-400 mt-1">{h.building} - {h.floor}</p><p className="text-sm text-slate-600 mt-2">السعة: {h.capacity} شخص</p>{date && <p className={"text-xs mt-2 font-medium " + (b ? "text-amber-600" : "text-emerald-600")}>{b ? ('يوجد ' + b + ' حجز في هذا التاريخ') : '✓ لا توجد حجوزات في هذا التاريخ'}</p>}</div>); })}</div>
+    </div>
+  );
+}
+
+// ============================================================
+// DASHBOARD (Enhanced with filters, drill-down, export)
+// ============================================================
+function DashboardPage() {
+  var ctx = useContext(AppCtx);
+  var cu = ctx.currentUser;
+  var isAdmin = cu && cu.role === 'مدير النظام';
+  var allBookings = ld('bookings', []);
+  var halls = ld('halls', HALLS_DEFAULT);
+  var now = new Date();
+  var curYear = now.getFullYear();
+  var curMonth = now.getMonth();
+
+  // Filter states
+  var _fPeriod = useState('الكل'); var fPeriod = _fPeriod[0]; var setFPeriod = _fPeriod[1];
+  var _fMonth = useState('الكل'); var fMonth = _fMonth[0]; var setFMonth = _fMonth[1];
+  var _fYear = useState(String(curYear)); var fYear = _fYear[0]; var setFYear = _fYear[1];
+  var _fDept = useState('الكل'); var fDept = _fDept[0]; var setFDept = _fDept[1];
+  var _fHall = useState('الكل'); var fHall = _fHall[0]; var setFHall = _fHall[1];
+  var _fType = useState('الكل'); var fType = _fType[0]; var setFType = _fType[1];
+  var _fStatus = useState('الكل'); var fStatus = _fStatus[0]; var setFStatus = _fStatus[1];
+
+  // Drill-down modal state
+  var _ddModal = useState(null); var ddModal = _ddModal[0]; var setDdModal = _ddModal[1];
+  var _ddTitle = useState(''); var ddTitle = _ddTitle[0]; var setDdTitle = _ddTitle[1];
+  var _ddData = useState([]); var ddData = _ddData[0]; var setDdData = _ddData[1];
+
+  var mNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  var years = [];
+  var allYears = {};
+  allBookings.forEach(function(b) { if (b.date) { var y = b.date.substring(0, 4); allYears[y] = true; } });
+  allYears[String(curYear)] = true;
+  years = Object.keys(allYears).sort();
+
+  // Apply filters
+  var today = now.toISOString().split('T')[0];
+  var weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+  var weekStartStr = weekStart.toISOString().split('T')[0];
+
+  var bookings = allBookings.filter(function(b) {
+    // Time period filter
+    if (fPeriod === 'اليوم' && b.date !== today) return false;
+    if (fPeriod === 'هذا الأسبوع' && (b.date < weekStartStr || b.date > today)) return false;
+    if (fPeriod === 'هذا الشهر') {
+      var mStr = curYear + '-' + String(curMonth + 1).padStart(2, '0');
+      if (!b.date || b.date.substring(0, 7) !== mStr) return false;
+    }
+    // Month filter
+    if (fMonth !== 'الكل') {
+      var mIdx = mNames.indexOf(fMonth);
+      if (mIdx !== -1) {
+        var mKey = fYear + '-' + String(mIdx + 1).padStart(2, '0');
+        if (!b.date || b.date.substring(0, 7) !== mKey) return false;
+      }
+    }
+    // Year filter
+    if (fYear !== 'الكل' && b.date && b.date.substring(0, 4) !== fYear) return false;
+    // Department filter
+    if (fDept !== 'الكل' && b.department !== fDept) return false;
+    // Hall filter
+    if (fHall !== 'الكل' && b.hallId !== fHall) return false;
+    // Activity type filter
+    if (fType !== 'الكل' && b.type !== fType) return false;
+    // Status filter
+    if (fStatus !== 'الكل') {
+      var sm = Object.entries(STATUS_MAP).find(function(e) { return e[1].label === fStatus; });
+      if (sm && b.status !== sm[0]) return false;
+    }
+    return true;
+  });
+
+  var resetFilters = function() {
+    setFPeriod('الكل'); setFMonth('الكل'); setFYear(String(curYear));
+    setFDept('الكل'); setFHall('الكل'); setFType('الكل'); setFStatus('الكل');
+  };
+
+  // Stats
+  var stats = {
+    total: bookings.length,
+    newCount: bookings.filter(function(b) { return b.status === 'new'; }).length,
+    review: bookings.filter(function(b) { return b.status === 'review'; }).length,
+    approved: bookings.filter(function(b) { return b.status === 'approved'; }).length,
+    pending: bookings.filter(function(b) { return b.status === 'pending' || b.status === 'new'; }).length,
+    rejected: bookings.filter(function(b) { return b.status === 'rejected'; }).length,
+    cancelled: bookings.filter(function(b) { return b.status === 'cancelled'; }).length
+  };
+
+  var trainingTypes = ['تدريب', 'ورشة عمل', 'دورة تدريبية', 'محاضرة', 'ندوة', 'برنامج تدريبي'];
+  var trainingBookings = bookings.filter(function(b) { return trainingTypes.indexOf(b.type) !== -1 || (b.title && (b.title.indexOf('تدريب') !== -1 || b.title.indexOf('ورشة') !== -1 || b.title.indexOf('دورة') !== -1)); });
+  var trainingCount = trainingBookings.length;
+  var totalTrainees = trainingBookings.reduce(function(s, b) { return s + (parseInt(b.attendees) || 0); }, 0);
+  var approvalRate = stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0;
+  var rejectionRate = stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0;
+
+  // Hall usage rate
+  var approvedBookingsAll = bookings.filter(function(b) { return b.status === 'approved'; });
+  var totalHallHours = approvedBookingsAll.reduce(function(s, b) {
+    var p1 = (b.startTime || '0').split(':'); var p2 = (b.endTime || '0').split(':');
+    var a = parseInt(p1[0]) + (parseInt(p1[1] || 0) / 60);
+    var e = parseInt(p2[0]) + (parseInt(p2[1] || 0) / 60);
+    return s + Math.max(0, e - a);
+  }, 0);
+  var maxHours = halls.length * 8 * 22;
+  var hallUsageRate = maxHours > 0 ? Math.min(100, Math.round(totalHallHours / maxHours * 100)) : 0;
+
+  // Most used hall
+  var hallCounts = halls.map(function(h) {
+    return { name: h.name, count: bookings.filter(function(b) { return b.hallId === h.id; }).length };
+  }).sort(function(a, b) { return b.count - a.count; });
+  var topHallName = hallCounts.length > 0 && hallCounts[0].count > 0 ? hallCounts[0].name : '-';
+
+  // Drill-down helper: opens modal with filtered bookings (NO personal data)
+  var openDrillDown = function(title, filterFn) {
+    var filtered = bookings.filter(filterFn);
+    var safeData = filtered.map(function(b) {
+      var h = halls.find(function(x) { return x.id === b.hallId; });
+      return { id: b.id, title: b.title, date: b.date, hall: h && h.name ? h.name : '-', status: (STATUS_MAP[b.status] && STATUS_MAP[b.status].label) || b.status, statusColor: (STATUS_MAP[b.status] && STATUS_MAP[b.status].color) || '' };
+    });
+    setDdTitle(title);
+    setDdData(safeData);
+    setDdModal(true);
+  };
+
+  // KPI Row 1: total, new, review, approved, rejected, cancelled
+  var kpi1 = [
+    { l: 'إجمالي الطلبات', en: 'Total Requests', v: stats.total, c: 'from-blue-500 to-blue-600', i: '📊', filter: function() { return true; } },
+    { l: 'جديدة', en: 'New', v: stats.newCount, c: 'from-violet-500 to-purple-600', i: '🆕', filter: function(b) { return b.status === 'new'; } },
+    { l: 'قيد المراجعة', en: 'Under Review', v: stats.review, c: 'from-sky-500 to-cyan-600', i: '🔍', filter: function(b) { return b.status === 'review'; } },
+    { l: 'معتمدة', en: 'Approved', v: stats.approved, c: 'from-emerald-500 to-green-600', i: '✅', filter: function(b) { return b.status === 'approved'; } },
+    { l: 'مرفوضة', en: 'Rejected', v: stats.rejected, c: 'from-red-500 to-rose-600', i: '❌', filter: function(b) { return b.status === 'rejected'; } },
+    { l: 'ملغاة', en: 'Cancelled', v: stats.cancelled, c: 'from-gray-400 to-gray-500', i: '🚫', filter: function(b) { return b.status === 'cancelled'; } }
+  ];
+
+  // KPI Row 2: approval rate, rejection rate, hall usage, training count, trainees, most used hall
+  var kpi2 = [
+    { l: 'نسبة الاعتماد', en: 'Approval Rate', v: approvalRate + '%', c: 'text-emerald-600', i: '📈', filter: function(b) { return b.status === 'approved'; } },
+    { l: 'نسبة الرفض', en: 'Rejection Rate', v: rejectionRate + '%', c: 'text-red-600', i: '📉', filter: function(b) { return b.status === 'rejected'; } },
+    { l: 'نسبة إشغال القاعات', en: 'Hall Usage', v: hallUsageRate + '%', c: 'text-sky-600', i: '🏛️', filter: function(b) { return b.status === 'approved'; } },
+    { l: 'البرامج التدريبية', en: 'Training Programs', v: trainingCount, c: 'text-violet-600', i: '🎓', filter: function(b) { return trainingTypes.indexOf(b.type) !== -1 || (b.title && (b.title.indexOf('تدريب') !== -1 || b.title.indexOf('ورشة') !== -1 || b.title.indexOf('دورة') !== -1)); } },
+    { l: 'إجمالي المتدربين', en: 'Total Trainees', v: totalTrainees, c: 'text-amber-600', i: '👥', filter: function(b) { return trainingTypes.indexOf(b.type) !== -1 || (b.title && (b.title.indexOf('تدريب') !== -1 || b.title.indexOf('ورشة') !== -1 || b.title.indexOf('دورة') !== -1)); } },
+    { l: 'أكثر القاعات استخداماً', en: 'Most Used Hall', v: topHallName.replace('قاعة ', ''), c: 'text-primary-700', i: '🏆', filter: function(b) { var topH = hallCounts.length > 0 ? halls.find(function(h) { return h.name === hallCounts[0].name; }) : null; return topH && b.hallId === topH.id; } }
+  ];
+
+  // Chart data: Monthly bookings
+  var monthlyD = [];
+  for (var mi = 0; mi < 12; mi++) {
+    var mKey = fYear + '-' + String(mi + 1).padStart(2, '0');
+    var mCount = bookings.filter(function(b) { return b.date && b.date.substring(0, 7) === mKey; }).length;
+    monthlyD.push({ name: mNames[mi].substring(0, 5), fullName: mNames[mi], count: mCount, mIdx: mi });
+  }
+
+  // Chart data: By hall (Pie)
+  var pieD = halls.map(function(h) { return { name: h.name.replace('قاعة ', ''), fullName: h.name, hallId: h.id, value: bookings.filter(function(b) { return b.hallId === h.id; }).length }; }).filter(function(x) { return x.value > 0; });
+  var PC = ['#075985', '#7c3aed', '#006272', '#C9A84C', '#dc2626', '#059669', '#d97706'];
+
+  // Chart data: By department (horizontal bar)
+  var deptD = getAllDeptNames().map(function(d) { return { name: d.replace('إدارة ', '').substring(0, 14), fullName: d, count: bookings.filter(function(b) { return b.department === d; }).length }; }).filter(function(x) { return x.count > 0; }).sort(function(a, b) { return b.count - a.count; });
+
+  // Chart data: Status distribution (Donut)
+  var statusPieD = [
+    { name: 'معتمدة', value: stats.approved, key: 'approved' },
+    { name: 'معلقة', value: stats.pending, key: 'pending' },
+    { name: 'مرفوضة', value: stats.rejected, key: 'rejected' },
+    { name: 'ملغاة', value: stats.cancelled, key: 'cancelled' }
+  ].filter(function(x) { return x.value > 0; });
+  var statusPC = ['#059669', '#d97706', '#dc2626', '#9ca3af'];
+
+  // Chart data: By activity type
+  var typeD = ACTIVITY_TYPES.map(function(t) { return { name: t, count: bookings.filter(function(b) { return b.type === t; }).length }; }).filter(function(x) { return x.count > 0; }).sort(function(a, b) { return b.count - a.count; });
+
+  // Hall occupancy progress bars
+  var occ = halls.map(function(h) {
+    var hb = bookings.filter(function(b) { return b.hallId === h.id && b.status === 'approved'; });
+    var th = hb.reduce(function(s, b) {
+      var parts1 = (b.startTime || '0').split(':'); var parts2 = (b.endTime || '0').split(':');
+      var a = parseInt(parts1[0]) + (parseInt(parts1[1] || 0) / 60);
+      var e = parseInt(parts2[0]) + (parseInt(parts2[1] || 0) / 60);
+      return s + Math.max(0, e - a);
+    }, 0);
+    return { name: h.name, hallId: h.id, pct: Math.min(100, Math.round(th / (8 * 22) * 100)), bookings: hb.length };
+  }).sort(function(a, b) { return b.bookings - a.bookings; });
+
+  // Export functions — restricted to System Administrator only
+  var checkExportPermission = function(exportType) {
+    if (!isAdmin) {
+      addLog('محاولة تصدير غير مصرح بها', '-', cu && cu.name ? cu.name : 'زائر', cu && cu.role ? cu.role : 'زائر', 'محاولة تصدير ' + exportType + ' بدون صلاحية — تم الرفض');
+      alert('ليس لديك صلاحية لتنفيذ هذه العملية');
+      return false;
+    }
+    return true;
+  };
+  var exportPDF = function() {
+    if (!checkExportPermission('PDF')) return;
+    addLog('تصدير بيانات', '-', cu.name, cu.role, 'تصدير لوحة المعلومات بصيغة PDF — ' + bookings.length + ' سجل');
+    window.print();
+  };
+  var exportExcel = function() {
+    if (!checkExportPermission('Excel/CSV')) return;
+    addLog('تصدير بيانات', '-', cu.name, cu.role, 'تصدير لوحة المعلومات بصيغة Excel/CSV — ' + bookings.length + ' سجل');
+    var header = ['رقم الحجز','البرنامج','التاريخ','القاعة','الحالة','نوع النشاط','الإدارة'];
+    var rows = bookings.map(function(b) {
+      var h = halls.find(function(x) { return x.id === b.hallId; });
+      return [b.id, b.title, b.date, h && h.name ? h.name : '-', (STATUS_MAP[b.status] && STATUS_MAP[b.status].label) || b.status, b.type, b.department];
+    });
+    var csv = '\uFEFF' + header.join(',') + '\n' + rows.map(function(r) { return r.map(function(c) { return '"' + (c || '').replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'dashboard-bookings-' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click(); URL.revokeObjectURL(url);
+  };
+  var exportPrint = function() {
+    if (!checkExportPermission('طباعة')) return;
+    addLog('تصدير بيانات', '-', cu.name, cu.role, 'طباعة لوحة المعلومات — ' + bookings.length + ' سجل');
+    window.print();
+  };
+
+  // Chart click handlers for drill-down
+  var onMonthBarClick = function(data) {
+    if (data && data.activePayload && data.activePayload[0]) {
+      var item = data.activePayload[0].payload;
+      var mKey2 = fYear + '-' + String(item.mIdx + 1).padStart(2, '0');
+      openDrillDown('حجوزات شهر ' + item.fullName, function(b) { return b.date && b.date.substring(0, 7) === mKey2; });
+    }
+  };
+  var onHallPieClick = function(_, idx) {
+    if (pieD[idx]) {
+      var hid = pieD[idx].hallId;
+      openDrillDown('حجوزات ' + pieD[idx].fullName, function(b) { return b.hallId === hid; });
+    }
+  };
+  var onDeptBarClick = function(data) {
+    if (data && data.activePayload && data.activePayload[0]) {
+      var item = data.activePayload[0].payload;
+      openDrillDown('حجوزات ' + item.fullName, function(b) { return b.department === item.fullName; });
+    }
+  };
+  var onStatusPieClick = function(_, idx) {
+    if (statusPieD[idx]) {
+      var sk = statusPieD[idx].key;
+      var filterFn = sk === 'pending' ? function(b) { return b.status === 'pending' || b.status === 'new'; } : function(b) { return b.status === sk; };
+      openDrillDown('الحجوزات ' + statusPieD[idx].name, filterFn);
+    }
+  };
+  var onTypeBarClick = function(data) {
+    if (data && data.activePayload && data.activePayload[0]) {
+      var item = data.activePayload[0].payload;
+      openDrillDown('حجوزات نوع: ' + item.name, function(b) { return b.type === item.name; });
+    }
+  };
+
+  var ttStyle = {borderRadius:'12px',border:'1px solid #e2e8f0',fontSize:'13px'};
+
+  return (
+    <div className="space-y-6 slide-up">
+      {/* Filter Bar */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-4 no-print">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><span>🔍</span> تصفية البيانات</h3>
+          <div className="flex gap-2">
+            <button onClick={resetFilters} className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-colors">↻ إعادة تعيين</button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div><label className="text-[10px] text-slate-400 block mb-1">الفترة الزمنية</label><select value={fPeriod} onChange={function(e){setFPeriod(e.target.value);}} className="input-modern w-full text-xs bg-white"><option>الكل</option><option>اليوم</option><option>هذا الأسبوع</option><option>هذا الشهر</option></select></div>
+          <div><label className="text-[10px] text-slate-400 block mb-1">الشهر</label><select value={fMonth} onChange={function(e){setFMonth(e.target.value);}} className="input-modern w-full text-xs bg-white"><option>الكل</option>{mNames.map(function(m){return <option key={m}>{m}</option>;})}</select></div>
+          <div><label className="text-[10px] text-slate-400 block mb-1">السنة</label><select value={fYear} onChange={function(e){setFYear(e.target.value);}} className="input-modern w-full text-xs bg-white"><option>الكل</option>{years.map(function(y){return <option key={y}>{y}</option>;})}</select></div>
+          <div><label className="text-[10px] text-slate-400 block mb-1">الإدارة</label><select value={fDept} onChange={function(e){setFDept(e.target.value);}} className="input-modern w-full text-xs bg-white"><option value="الكل">الكل</option>{getAllDeptNames().map(function(d){return <option key={d} value={d}>{d.replace('إدارة ','').substring(0,18)}</option>;})}</select></div>
+          <div><label className="text-[10px] text-slate-400 block mb-1">القاعة</label><select value={fHall} onChange={function(e){setFHall(e.target.value);}} className="input-modern w-full text-xs bg-white"><option value="الكل">الكل</option>{halls.map(function(h){return <option key={h.id} value={h.id}>{h.name}</option>;})}</select></div>
+          <div><label className="text-[10px] text-slate-400 block mb-1">نوع النشاط</label><select value={fType} onChange={function(e){setFType(e.target.value);}} className="input-modern w-full text-xs bg-white"><option value="الكل">الكل</option>{ACTIVITY_TYPES.map(function(t){return <option key={t}>{t}</option>;})}</select></div>
+          <div><label className="text-[10px] text-slate-400 block mb-1">الحالة</label><select value={fStatus} onChange={function(e){setFStatus(e.target.value);}} className="input-modern w-full text-xs bg-white"><option>الكل</option>{Object.values(STATUS_MAP).map(function(s){return <option key={s.label}>{s.label}</option>;})}</select></div>
+        </div>
+      </div>
+
+      {/* Export Buttons — visible only for System Administrator */}
+      {isAdmin && <div className="flex gap-2 no-print">
+        <button onClick={exportPDF} className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-medium hover:bg-red-100 transition-colors flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg> تصدير PDF</button>
+        <button onClick={exportExcel} className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-colors flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> تصدير Excel</button>
+        <button onClick={exportPrint} className="px-4 py-2 bg-sky-50 text-sky-600 rounded-xl text-xs font-medium hover:bg-sky-100 transition-colors flex items-center gap-1.5"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg> طباعة</button>
+      </div>}
+
+      {/* KPI Row 1: Status counts */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">{kpi1.map(function(k, i) { return (
+        <div key={i} onClick={function(){openDrillDown(k.l, k.filter);}} className="bg-white rounded-2xl border border-slate-100 p-4 card-hover cursor-pointer group">
+          <div className="flex items-center justify-between mb-2"><span className="text-xl group-hover:scale-110 transition-transform">{k.i}</span><div className={"w-9 h-9 bg-gradient-to-br " + k.c + " rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-lg"}>{k.v}</div></div>
+          <p className="text-xs font-medium text-slate-500">{k.l}</p>
+          <p className="text-[10px] text-slate-400">{k.en}</p>
+          <p className="text-2xl font-bold text-slate-800 mt-1">{k.v}</p>
+        </div>); })}</div>
+
+      {/* KPI Row 2: Rates & metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">{kpi2.map(function(k, i) { return (
+        <div key={i} onClick={function(){openDrillDown(k.l, k.filter);}} className="bg-white rounded-2xl border border-slate-100 p-4 card-hover cursor-pointer group">
+          <div className="flex items-center gap-2 mb-2"><span className="text-lg group-hover:scale-110 transition-transform">{k.i}</span></div>
+          <p className="text-xs font-medium text-slate-500">{k.l}</p>
+          <p className="text-[10px] text-slate-400">{k.en}</p>
+          <p className={"text-xl font-bold mt-1 " + k.c}>{k.v}</p>
+        </div>); })}</div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Monthly bookings bar chart */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4">الحجوزات حسب الشهر ({fYear !== 'الكل' ? fYear : curYear})</h3><ResponsiveContainer width="100%" height={250}><BarChart data={monthlyD} onClick={onMonthBarClick} style={{cursor:'pointer'}}><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9"/><XAxis dataKey="name" tick={{fontSize:10}}/><YAxis tick={{fontSize:12}} allowDecimals={false}/><Tooltip contentStyle={ttStyle}/><Bar dataKey="count" name="الحجوزات" fill="#075985" radius={[8,8,0,0]}/></BarChart></ResponsiveContainer></div>
+
+        {/* Hall distribution pie chart */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4">الحجوزات حسب القاعة</h3><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={pieD} cx="50%" cy="50%" outerRadius={85} dataKey="value" label={function(p) { return p.name + ': ' + p.value; }} onClick={onHallPieClick} style={{cursor:'pointer'}}>{pieD.map(function(_, i) { return <Cell key={i} fill={PC[i % PC.length]}/>; })}</Pie><Tooltip contentStyle={ttStyle}/></PieChart></ResponsiveContainer></div>
+
+        {/* Department horizontal bar chart */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4">الحجوزات حسب الإدارة</h3><ResponsiveContainer width="100%" height={280}><BarChart data={deptD} layout="vertical" onClick={onDeptBarClick} style={{cursor:'pointer'}}><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9"/><XAxis type="number" tick={{fontSize:12}} allowDecimals={false}/><YAxis type="category" dataKey="name" tick={{fontSize:10}} width={100}/><Tooltip contentStyle={ttStyle}/><Bar dataKey="count" name="الحجوزات" fill="#006272" radius={[0,8,8,0]}/></BarChart></ResponsiveContainer></div>
+
+        {/* Status distribution donut */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4">توزيع حالات الحجوزات</h3><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={statusPieD} cx="50%" cy="50%" innerRadius={50} outerRadius={85} dataKey="value" label={function(p) { return p.name + ' ' + p.value; }} onClick={onStatusPieClick} style={{cursor:'pointer'}}>{statusPieD.map(function(_, i) { return <Cell key={i} fill={statusPC[i % statusPC.length]}/>; })}</Pie><Tooltip contentStyle={ttStyle}/></PieChart></ResponsiveContainer></div>
+
+        {/* Hall occupancy progress bars */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4">نسبة إشغال القاعات</h3><div className="space-y-4 mt-2">{occ.map(function(h, i) { return (
+          <div key={i} onClick={function(){openDrillDown('حجوزات ' + h.name, function(b) { return b.hallId === h.hallId && b.status === 'approved'; });}} className="cursor-pointer hover:bg-slate-50 rounded-xl p-2 -m-2 transition-colors">
+            <div className="flex justify-between text-sm mb-1"><span className="font-medium text-slate-600">{h.name}</span><div className="flex items-center gap-2"><span className="text-xs text-slate-400">{h.bookings} حجز</span><span className="font-bold text-primary-700">{h.pct}%</span></div></div>
+            <div className="w-full bg-slate-100 rounded-full h-2.5"><div className={"h-2.5 rounded-full transition-all duration-500 " + (h.pct > 70 ? 'bg-red-500' : h.pct > 40 ? 'bg-amber-500' : 'bg-emerald-500')} style={{width: h.pct + '%'}}></div></div>
+          </div>); })}</div></div>
+
+        {/* Activity type bar chart */}
+        <div className="bg-white rounded-2xl border border-slate-100 p-5"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4">الحجوزات حسب نوع النشاط</h3><ResponsiveContainer width="100%" height={250}><BarChart data={typeD} onClick={onTypeBarClick} style={{cursor:'pointer'}}><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9"/><XAxis dataKey="name" tick={{fontSize:10}}/><YAxis tick={{fontSize:12}} allowDecimals={false}/><Tooltip contentStyle={ttStyle}/><Bar dataKey="count" name="الحجوزات" fill="#C9A84C" radius={[8,8,0,0]}/></BarChart></ResponsiveContainer></div>
+      </div>
+
+      {/* Drill-Down Modal */}
+      <Modal isOpen={!!ddModal} onClose={function(){setDdModal(null);}} title={ddTitle} wide>
+        <div className="space-y-3">
+          <p className="text-xs text-slate-400 mb-2">عدد النتائج: {ddData.length}</p>
+          {ddData.length === 0 && <p className="text-sm text-slate-400 text-center py-6">لا توجد حجوزات مطابقة</p>}
+          {ddData.length > 0 && <div className="overflow-x-auto max-h-96 overflow-y-auto"><table className="w-full text-sm"><thead className="sticky top-0 bg-white"><tr className="border-b border-slate-200"><th className="text-right py-2.5 px-2 font-semibold text-slate-500 text-xs">الرقم</th><th className="text-right py-2.5 px-2 font-semibold text-slate-500 text-xs">البرنامج</th><th className="text-right py-2.5 px-2 font-semibold text-slate-500 text-xs">التاريخ</th><th className="text-right py-2.5 px-2 font-semibold text-slate-500 text-xs">القاعة</th><th className="text-right py-2.5 px-2 font-semibold text-slate-500 text-xs">الحالة</th></tr></thead><tbody>{ddData.map(function(r, i) { return (
+            <tr key={r.id} className={"border-b border-slate-50 hover:bg-slate-50/50 transition-colors " + (i % 2 ? 'bg-slate-50/30' : '')}>
+              <td className="py-2 px-2 font-mono text-xs text-primary-700 font-semibold">{r.id}</td>
+              <td className="py-2 px-2 text-slate-700 text-xs max-w-[200px] truncate">{r.title}</td>
+              <td className="py-2 px-2 text-slate-500 text-xs whitespace-nowrap">{r.date}</td>
+              <td className="py-2 px-2 text-slate-500 text-xs">{r.hall}</td>
+              <td className="py-2 px-2"><span className={"px-2 py-0.5 rounded-full text-xs font-medium " + r.statusColor}>{r.status}</span></td>
+            </tr>); })}</tbody></table></div>}
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function CalendarPage() {
+  var _s1 = useState(new Date(2026,6,1)); var cur = _s1[0]; var setCur = _s1[1];
+  var bookings = ld('bookings',[]);
+  var halls = ld('halls',HALLS_DEFAULT);
+  var _s2 = useState(null); var sel = _s2[0]; var setSel = _s2[1];
+  var y=cur.getFullYear(), m=cur.getMonth();
+  var fd=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate();
+  var days=[]; for(var i=0;i<fd;i++)days.push(null); for(var i2=1;i2<=dim;i2++)days.push(i2);
+  var getB=function(d){if(!d)return[];var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');return bookings.filter(function(b){return b.date===ds;});};
+  var selStr=sel?y+'-'+String(m+1).padStart(2,'0')+'-'+String(sel).padStart(2,'0'):'';
+  var selB=sel?getB(sel):[];
+  return (
+    <div className="slide-up"><div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex-1 bg-white rounded-2xl border border-slate-100 p-5">
+        <div className="gradient-bar mb-4" style={{width:'100%'}}></div>
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={function(){setCur(new Date(y,m+1,1));}} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">{I.chR()}</button>
+          <h3 className="text-xl font-bold text-slate-800">{ARABIC_MONTHS[m]} {y}</h3>
+          <button onClick={function(){setCur(new Date(y,m-1,1));}} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">{I.chL()}</button>
+        </div>
+        <button onClick={function(){setCur(new Date());}} className="mb-4 px-4 py-1.5 text-xs bg-primary-50 text-primary-700 rounded-xl hover:bg-primary-100 font-medium transition-colors">اليوم</button>
+        <div className="grid grid-cols-7 gap-1 mb-2">{ARABIC_DAYS_SHORT.map(function(d){return <div key={d} className="text-center text-xs font-semibold text-slate-400 py-2">{d}</div>;})}</div>
+        <div className="grid grid-cols-7 gap-1">{days.map(function(day,i){if(!day)return<div key={i}></div>;var db=getB(day);var isT=day===8&&m===6&&y===2026;var isS=day===sel;return(<div key={i} onClick={function(){setSel(day);}} className={"min-h-[70px] p-1 border rounded-xl cursor-pointer transition-all " + (isS?'border-primary-400 bg-primary-50 ring-2 ring-primary-100':isT?'border-primary-200 bg-primary-50/50':'border-slate-100 hover:border-slate-200 hover:bg-slate-50')}><span className={"text-xs font-medium " + (isT?'text-primary-700 font-bold':'text-slate-600')}>{day}</span><div className="mt-1 space-y-0.5">{db.slice(0,3).map(function(b){return(<div key={b.id} className={"text-[10px] px-1 py-0.5 rounded truncate " + (b.status==='approved'?'bg-emerald-100 text-emerald-700':b.status==='pending'||b.status==='new'?'bg-amber-100 text-amber-700':b.status==='rejected'?'bg-red-100 text-red-700':'bg-gray-100 text-gray-600')}>{b.title.substring(0,12)}</div>);})}{db.length>3&&<div className="text-[10px] text-slate-400 text-center">+{db.length-3}</div>}</div></div>);})}</div>
+        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">{[{l:'معتمد',c:'bg-emerald-500'},{l:'معلق',c:'bg-amber-500'},{l:'مرفوض',c:'bg-red-500'},{l:'ملغي',c:'bg-gray-400'}].map(function(x){return(<div key={x.l} className="flex items-center gap-1.5"><div className={"w-3 h-3 rounded-full " + x.c}></div><span className="text-xs text-slate-500">{x.l}</span></div>);})}</div>
+      </div>
+      {sel&&(<div className="w-full lg:w-80 bg-white rounded-2xl border border-slate-100 p-5 slide-up"><div className="gradient-bar mb-3" style={{width:'100%'}}></div><h3 className="text-base font-bold text-slate-800 mb-4">{sel} {ARABIC_MONTHS[m]} {y}</h3>{selB.length===0?<p className="text-sm text-slate-400 text-center py-8">لا توجد حجوزات</p>:<div className="space-y-3">{selB.map(function(b){var h=halls.find(function(x){return x.id===b.hallId;});return(<div key={b.id} className="p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors"><div className="flex items-center justify-between mb-2"><span className="text-xs font-mono text-primary-600 font-semibold">{b.id}</span><span className={"px-2 py-0.5 rounded-full text-xs font-medium " + ((STATUS_MAP[b.status] && STATUS_MAP[b.status].color) || '')}>{(STATUS_MAP[b.status] && STATUS_MAP[b.status].label) || b.status}</span></div><p className="text-sm font-semibold text-slate-800">{b.title}</p><p className="text-xs text-slate-400 mt-1">{h && h.name ? h.name : '-'} | {b.startTime} - {b.endTime}</p><p className="text-xs text-slate-400 mt-1">{b.department}</p></div>);})}</div>}</div>)}
+    </div></div>
+  );
+}
+
+// ============================================================
+// NEW BOOKING
+// ============================================================
+function NewBookingPage() {
+  var ctx = useContext(AppCtx);
+  var cu = ctx.currentUser;
+  var navFn = ctx.nav;
+  var halls = ld('halls',HALLS_DEFAULT);
+  var st = ld('settings',{});
+  var types = st.activityTypes||ACTIVITY_TYPES;
+  var allDepts = getAllDeptNames();
+  var _s1 = useState({title:'',type:'اجتماع',priority:'متوسطة',department:'',section:'',organizer:'',requester:'',phone:'',email:'',hallId:'',date:'',startTime:'',endTime:'',attendees:'',equipment:[],hospitality:'غير مطلوبة',notes:'',deptSearch:''}); var f = _s1[0]; var setF = _s1[1];
+  var _s2 = useState(null); var conf = _s2[0]; var setConf = _s2[1];
+  var _s3 = useState(false); var avail = _s3[0]; var setAvail = _s3[1];
+  var _s4 = useState(false); var done = _s4[0]; var setDone = _s4[1];
+  var upd=function(k,v){var nf=Object.assign({},f);nf[k]=v;setF(nf);if(['hallId','date','startTime','endTime'].indexOf(k)!==-1)chk(nf);};
+  var togEq=function(item){setF(function(p){var eq=p.equipment.slice();var idx=eq.indexOf(item);if(idx!==-1)eq.splice(idx,1);else eq.push(item);return Object.assign({},p,{equipment:eq});});};
+  var chk=function(ff){setConf(null);setAvail(false);if(!ff.hallId||!ff.date||!ff.startTime||!ff.endTime)return;var dayOfWeek = new Date(ff.date).getDay();var recurringConflict = RECURRING_BOOKINGS.find(function(rb) { if (rb.hall !== ff.hallId) return false; if (!rb.days.includes(dayOfWeek)) return false; return ff.startTime < rb.end && ff.endTime > rb.start; });if (recurringConflict) { setConf({ title: recurringConflict.nameAr, department: recurringConflict.dept, startTime: recurringConflict.start, endTime: recurringConflict.end, status: 'recurring', hallName: recurringConflict.hallName }); return; }var bk=ld('bookings',[]);var c=bk.find(function(b){if(b.hallId!==ff.hallId||b.date!==ff.date)return false;if(b.status!=='approved'&&b.status!=='pending'&&b.status!=='review')return false;return ff.startTime<b.endTime&&ff.endTime>b.startTime;});if(c){var hh=halls.find(function(h){return h.id===c.hallId;});setConf(Object.assign({},c,{hallName:hh ? hh.name : ''}));}else{setAvail(true);}};
+  var save=function(e){e.preventDefault();if(conf||!f.department)return;var bk=ld('bookings',[]);var nid=genId();var saveData=Object.assign({},f);delete saveData.deptSearch;var newB=Object.assign({},saveData,{id:nid,status:'pending',rejectionReason:'',createdAt:new Date().toISOString().replace('T',' ').substring(0,16),updatedBy:''});bk.push(newB);sv('bookings',bk);addLog('إنشاء',nid,cu ? cu.name : 'مستخدم عام',cu ? cu.role : 'مستخدم عام','إنشاء حجز جديد: '+f.title);addNotif('تم إنشاء حجز جديد '+nid+': '+f.title,'new');setDone(true);setTimeout(function(){navFn('approved-bookings');},1500);};
+  if(done)return(<div className="flex items-center justify-center py-20 slide-up"><div className="text-center bg-white rounded-2xl shadow-lg p-10 border border-emerald-100"><div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4"><svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg></div><h3 className="text-xl font-bold text-slate-800 mb-2">تم حفظ الحجز بنجاح</h3><p className="text-sm text-slate-400">تم إرسال الطلب وسيظهر بعد اعتماده من المسؤول</p></div></div>);
+  return (
+    <div className="slide-up"><form onSubmit={save} className="space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-100 p-6"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-8 h-8 bg-sky-100 text-sky-600 rounded-xl flex items-center justify-center text-sm">📝</span>معلومات البرنامج</h3><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="md:col-span-3"><label className="block text-sm font-medium text-slate-600 mb-1.5">اسم البرنامج/الفعالية <span className="text-red-400">*</span></label><input type="text" value={f.title} onChange={function(e){upd('title',e.target.value);}} className="input-modern w-full" required/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">نوع النشاط</label><select value={f.type} onChange={function(e){upd('type',e.target.value);}} className="input-modern w-full bg-white">{types.map(function(t){return <option key={t}>{t}</option>;})}</select></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">الأولوية</label><select value={f.priority} onChange={function(e){upd('priority',e.target.value);}} className="input-modern w-full bg-white">{PRIORITIES.map(function(p){return <option key={p}>{p}</option>;})}</select></div></div></div>
+      <div className="bg-white rounded-2xl border border-slate-100 p-6"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-8 h-8 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center text-sm">🏢</span>معلومات الجهة</h3><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="md:col-span-2"><label className="block text-sm font-medium text-slate-600 mb-1.5">الإدارة / القسم <span className="text-red-400">*</span></label><input type="text" value={f.deptSearch} onChange={function(e){upd('deptSearch',e.target.value);upd('department','');upd('section','');}} placeholder="🔍 ابحث عن الإدارة..." className="input-modern w-full mb-2 text-sm"/><select value={f.department} onChange={function(e){var val=e.target.value;upd('department',val);upd('section','');}} className="input-modern w-full bg-white" required>{React.createElement('option',{value:''},'— اختر الإدارة —')}{ORG_STRUCTURE.map(function(g){var filteredDepts=g.departments.filter(function(d){if(!f.deptSearch)return true;return d.name.indexOf(f.deptSearch)!==-1;});if(filteredDepts.length===0)return null;return React.createElement('optgroup',{key:g.group,label:'▸ '+g.group},filteredDepts.map(function(d){return React.createElement('option',{key:d.name,value:d.name},d.name+(d.sections.length>0?' ('+d.sections.length+' أقسام)':''));}));})}</select>{f.department&&!f.deptSearch&&<p className="text-xs text-emerald-600 mt-1">✓ {f.department}</p>}</div><div>{(function(){var selDept=null;ORG_STRUCTURE.forEach(function(g){g.departments.forEach(function(d){if(d.name===f.department&&d.sections.length>0)selDept=d;});});if(!selDept)return React.createElement('div',null,React.createElement('label',{className:'block text-sm font-medium text-slate-600 mb-1.5'},'القسم'),React.createElement('input',{type:'text',value:f.section,onChange:function(e){upd('section',e.target.value);},className:'input-modern w-full',placeholder:'اكتب اسم القسم (اختياري)'}));return React.createElement('div',null,React.createElement('label',{className:'block text-sm font-medium text-slate-600 mb-1.5'},'القسم الفرعي'),React.createElement('select',{value:f.section,onChange:function(e){upd('section',e.target.value);},className:'input-modern w-full bg-white'},React.createElement('option',{value:''},'— اختر القسم —'),selDept.sections.map(function(s){return React.createElement('option',{key:s,value:s},s);})));})()}</div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">الجهة المنظمة</label><input type="text" value={f.organizer} onChange={function(e){upd('organizer',e.target.value);}} className="input-modern w-full"/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">مقدم الطلب <span className="text-red-400">*</span></label><input type="text" value={f.requester} onChange={function(e){upd('requester',e.target.value);}} className="input-modern w-full" required/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">رقم الجوال</label><input type="tel" value={f.phone} onChange={function(e){upd('phone',e.target.value);}} pattern="[0-9]{10}" className="input-modern w-full" placeholder="05XXXXXXXX"/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">البريد الإلكتروني</label><input type="email" value={f.email} onChange={function(e){upd('email',e.target.value);}} className="input-modern w-full"/></div></div></div>
+      <div className="bg-white rounded-2xl border border-slate-100 p-6"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-8 h-8 bg-teal-100 text-teal-600 rounded-xl flex items-center justify-center text-sm">🏛️</span>تفاصيل الحجز</h3><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"><div><label className="block text-sm font-medium text-slate-600 mb-1.5">القاعة <span className="text-red-400">*</span></label><select value={f.hallId} onChange={function(e){upd('hallId',e.target.value);}} className="input-modern w-full bg-white" required><option value="">اختر القاعة</option>{halls.filter(function(h){return h.available;}).map(function(h){return <option key={h.id} value={h.id}>{h.name} (سعة {h.capacity})</option>;})}</select></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">التاريخ <span className="text-red-400">*</span></label><input type="date" value={f.date} onChange={function(e){upd('date',e.target.value);}} className="input-modern w-full" required/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">وقت البداية <span className="text-red-400">*</span></label><input type="time" value={f.startTime} onChange={function(e){upd('startTime',e.target.value);}} className="input-modern w-full" required/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">وقت النهاية <span className="text-red-400">*</span></label><input type="time" value={f.endTime} onChange={function(e){upd('endTime',e.target.value);}} className="input-modern w-full" required/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">عدد الحضور</label><input type="number" value={f.attendees} onChange={function(e){upd('attendees',e.target.value);}} className="input-modern w-full" min="1"/></div></div>
+        {conf&&<div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl slide-up"><div className="flex items-center gap-2 text-red-700 font-semibold text-sm mb-2"><span className="text-lg">⚠️</span> يوجد تعارض مع حجز آخر</div><div className="text-sm text-red-600 space-y-1"><p>البرنامج: <span className="font-medium">{conf.title}</span></p><p>الإدارة: {conf.department}</p><p>الوقت: {conf.startTime} - {conf.endTime}</p><p>الحالة: <span className={"px-2 py-0.5 rounded-full text-xs " + ((STATUS_MAP[conf.status] && STATUS_MAP[conf.status].color) || 'bg-violet-50 text-violet-700 border-violet-200')}>{(STATUS_MAP[conf.status] && STATUS_MAP[conf.status].label) || 'حجز دوري'}</span></p></div></div>}
+        {avail&&<div className="mt-4 p-3 bg-emerald-50 border border-emerald-100 rounded-xl slide-up"><span className="text-emerald-700 text-sm font-medium">✓ الموعد متاح</span></div>}
+      </div>
+      <div className="bg-white rounded-2xl border border-slate-100 p-6"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-sm">⚙️</span>متطلبات إضافية</h3><div className="mb-4"><label className="block text-sm font-medium text-slate-600 mb-2">الاحتياجات الفنية</label><div className="flex flex-wrap gap-3">{EQUIPMENT_LIST.map(function(eq){return(<label key={eq} className={"flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer text-sm transition-all " + (f.equipment.indexOf(eq)!==-1?'bg-primary-50 border-primary-200 text-primary-700':'bg-white border-slate-200 text-slate-500 hover:border-slate-300')}><input type="checkbox" checked={f.equipment.indexOf(eq)!==-1} onChange={function(){togEq(eq);}} className="w-4 h-4 text-primary-600 rounded"/>{eq}</label>);})}</div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-600 mb-1.5">الضيافة</label><select value={f.hospitality} onChange={function(e){upd('hospitality',e.target.value);}} className="input-modern w-full bg-white">{HOSPITALITY_OPTIONS.map(function(h){return <option key={h}>{h}</option>;})}</select></div></div><div className="mt-4"><label className="block text-sm font-medium text-slate-600 mb-1.5">ملاحظات</label><textarea value={f.notes} onChange={function(e){upd('notes',e.target.value);}} rows={3} className="input-modern w-full resize-none"></textarea></div></div>
+      <div className="flex gap-3 justify-end"><button type="button" onClick={function(){navFn('home');}} className="px-6 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button><button type="submit" disabled={!!conf} className="btn-primary">حفظ الحجز</button></div>
+    </form></div>
+  );
+}
+
+// ============================================================
+// APPROVALS
+// ============================================================
+function ApprovalsPage() {
+  var ctx = useContext(AppCtx); var cu = ctx.currentUser;
+  var _s1 = useState(ld('bookings',[])); var bks = _s1[0]; var setBks = _s1[1];
+  var halls = ld('halls',HALLS_DEFAULT);
+  var _s2 = useState(''); var srch = _s2[0]; var setSrch = _s2[1];
+  var _s3 = useState('الكل'); var stF = _s3[0]; var setStF = _s3[1];
+  var _s4 = useState('الكل'); var hF = _s4[0]; var setHF = _s4[1];
+  var _s5 = useState('الكل'); var dF = _s5[0]; var setDF = _s5[1];
+  var _s6 = useState(null); var rejM = _s6[0]; var setRejM = _s6[1];
+  var _s7 = useState(''); var rejR = _s7[0]; var setRejR = _s7[1];
+  var _s8 = useState(''); var cusR = _s8[0]; var setCusR = _s8[1];
+  var _s9 = useState(null); var detB = _s9[0]; var setDetB = _s9[1];
+  var ref = function() { setBks(ld('bookings',[])); };
+  var flt = bks.filter(function(b){if(stF!=='الكل'){var m=Object.entries(STATUS_MAP).find(function(e){return e[1].label===stF;});if(m&&b.status!==m[0])return false;}if(hF!=='الكل'&&b.hallId!==hF)return false;if(dF!=='الكل'&&b.department!==dF)return false;if(srch&&b.title.indexOf(srch)===-1&&b.id.indexOf(srch)===-1&&b.requester.indexOf(srch)===-1)return false;return true;}).sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);});
+  var pc = bks.filter(function(b){return b.status==='pending'||b.status==='new';}).length;
+  var upSt=function(id,ns){var all=ld('bookings',[]);var i=all.findIndex(function(b){return b.id===id;});if(i===-1)return;all[i].status=ns;all[i].updatedBy=cu.name;sv('bookings',all);var am={approved:'اعتماد',review:'مراجعة',cancelled:'إلغاء'};addLog(am[ns]||ns,id,cu.name,cu.role,(am[ns]||ns)+' الحجز '+id);addNotif('تم '+(am[ns]||ns)+' الحجز '+id+': '+all[i].title,ns);ref();};
+  var doRej=function(){if(!rejR)return;var reason=rejR==='أخرى (يرجى التحديد)'?cusR:rejR;if(!reason)return;var all=ld('bookings',[]);var i=all.findIndex(function(b){return b.id===rejM.id;});if(i===-1)return;all[i].status='rejected';all[i].rejectionReason=reason;all[i].updatedBy=cu.name;sv('bookings',all);addLog('رفض',rejM.id,cu.name,cu.role,'رفض الحجز '+rejM.id+' - السبب: '+reason);addNotif('تم رفض الحجز '+rejM.id+': '+reason,'rejected');setRejM(null);setRejR('');setCusR('');ref();};
+  return (
+    <div className="space-y-6 slide-up">
+      <div className="flex items-center gap-3 flex-wrap"><h2 className="text-lg font-bold text-slate-800">الموافقات وإدارة الحجوزات</h2>{pc>0&&<span className="bg-amber-500 text-white text-xs font-bold px-2.5 py-1 rounded-full pulse-badge">{pc} معلق</span>}</div>
+      <div className="bg-white rounded-2xl border border-slate-100 p-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-3"><div className="relative"><span className="absolute right-3 top-2.5 text-slate-400">{I.srch()}</span><input type="text" value={srch} onChange={function(e){setSrch(e.target.value);}} placeholder="بحث بالاسم أو الرقم..." className="input-modern w-full pr-10"/></div><select value={stF} onChange={function(e){setStF(e.target.value);}} className="input-modern bg-white"><option>الكل</option>{Object.values(STATUS_MAP).map(function(s){return <option key={s.label}>{s.label}</option>;})}</select><select value={hF} onChange={function(e){setHF(e.target.value);}} className="input-modern bg-white"><option value="الكل">جميع القاعات</option>{halls.map(function(h){return <option key={h.id} value={h.id}>{h.name}</option>;})}</select><select value={dF} onChange={function(e){setDF(e.target.value);}} className="input-modern bg-white"><option value="الكل">جميع الإدارات</option>{getAllDeptNames().map(function(d){return <option key={d} value={d}>{d}</option>;})}</select></div></div>
+      <div className="space-y-4">{flt.length===0&&<div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-100">لا توجد حجوزات مطابقة</div>}{flt.map(function(b){var h=halls.find(function(x){return x.id===b.hallId;});var s=STATUS_MAP[b.status]||STATUS_MAP.pending;return(<div key={b.id} className="bg-white rounded-2xl border border-slate-100 p-5 card-hover"><div className="gradient-bar mb-3" style={{width:'100%'}}></div><div className="flex items-start justify-between mb-3"><span className="font-mono text-sm text-primary-700 font-semibold">{b.id}</span><span className={"px-3 py-1 rounded-full text-xs font-medium border " + s.color}>{s.label}</span></div><h4 className="text-base font-bold text-slate-800 mb-2">{b.title}</h4><div className="flex flex-wrap gap-2 mb-3"><span className="px-2 py-0.5 bg-sky-50 text-sky-700 rounded-lg text-xs font-medium">{b.type}</span><span className={"px-2 py-0.5 rounded-lg text-xs font-medium " + (PRIORITY_COLORS[b.priority]||'')}>{b.priority}</span></div><div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-600 mb-4"><div><span className="text-slate-400 text-xs">التاريخ:</span><br/>{b.date}</div><div><span className="text-slate-400 text-xs">الوقت:</span><br/>{b.startTime} - {b.endTime}</div><div><span className="text-slate-400 text-xs">القاعة:</span><br/>{h && h.name ? h.name : '-'}</div><div><span className="text-slate-400 text-xs">الإدارة:</span><br/>{b.department}</div><div><span className="text-slate-400 text-xs">المنظم:</span><br/>{b.organizer||'-'}</div><div><span className="text-slate-400 text-xs">مقدم الطلب:</span><br/>{b.requester}</div><div><span className="text-slate-400 text-xs">الحضور:</span><br/>{b.attendees||'-'}</div>{b.notes&&<div><span className="text-slate-400 text-xs">ملاحظات:</span><br/>{b.notes}</div>}</div>{b.rejectionReason&&<div className="mb-3 p-2 bg-red-50 rounded-xl text-sm text-red-700"><span className="font-medium">سبب الرفض:</span> {b.rejectionReason}</div>}<div className="flex flex-wrap gap-2 pt-3 border-t border-slate-100">{(b.status==='pending'||b.status==='new')&&<><button onClick={function(){upSt(b.id,'approved');}} className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-medium hover:bg-emerald-700 transition-colors">اعتماد</button><button onClick={function(){upSt(b.id,'review');}} className="px-4 py-1.5 bg-sky-600 text-white rounded-xl text-xs font-medium hover:bg-sky-700 transition-colors">مراجعة</button><button onClick={function(){setRejM(b);}} className="px-4 py-1.5 bg-red-600 text-white rounded-xl text-xs font-medium hover:bg-red-700 transition-colors">رفض</button></>}{b.status==='review'&&<><button onClick={function(){upSt(b.id,'approved');}} className="px-4 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-medium hover:bg-emerald-700 transition-colors">اعتماد</button><button onClick={function(){setRejM(b);}} className="px-4 py-1.5 bg-red-600 text-white rounded-xl text-xs font-medium hover:bg-red-700 transition-colors">رفض</button></>}{b.status==='approved'&&<button onClick={function(){upSt(b.id,'cancelled');}} className="px-4 py-1.5 bg-gray-500 text-white rounded-xl text-xs font-medium hover:bg-gray-600 transition-colors">إلغاء</button>}<button onClick={function(){setDetB(b);}} className="px-4 py-1.5 border border-slate-200 text-slate-500 rounded-xl text-xs font-medium hover:bg-slate-50 transition-colors">عرض التفاصيل</button></div></div>);})}</div>
+      <Modal isOpen={!!rejM} onClose={function(){setRejM(null);setRejR('');setCusR('');}} title="رفض طلب الحجز">{rejM&&<div className="space-y-4"><div className="p-3 bg-slate-50 rounded-xl text-sm space-y-1"><p><span className="font-medium text-slate-600">البرنامج:</span> {rejM.title}</p><p><span className="font-medium text-slate-600">التاريخ:</span> {rejM.date}</p><p><span className="font-medium text-slate-600">الوقت:</span> {rejM.startTime} - {rejM.endTime}</p><p><span className="font-medium text-slate-600">القاعة:</span> {(function(){var _h=halls.find(function(h){return h.id===rejM.hallId;});return _h ? _h.name : '-';})()}</p></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">سبب الرفض</label><select value={rejR} onChange={function(e){setRejR(e.target.value);}} className="input-modern w-full bg-white"><option value="">اختر السبب</option>{REJECTION_REASONS.map(function(r){return <option key={r}>{r}</option>;})}</select></div>{rejR==='أخرى (يرجى التحديد)'&&<div><label className="block text-sm font-medium text-slate-600 mb-1.5">يرجى كتابة سبب الرفض</label><textarea value={cusR} onChange={function(e){setCusR(e.target.value);}} rows={3} className="input-modern w-full resize-none"></textarea></div>}<div className="flex gap-3 justify-end pt-2"><button onClick={function(){setRejM(null);setRejR('');setCusR('');}} className="px-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button><button onClick={doRej} disabled={!rejR||(rejR==='أخرى (يرجى التحديد)'&&!cusR)} className="btn-primary disabled:bg-slate-300 disabled:shadow-none">تأكيد الرفض</button></div></div>}</Modal>
+      <Modal isOpen={!!detB} onClose={function(){setDetB(null);}} title="تفاصيل الحجز" wide>{detB&&<div className="space-y-4 text-sm"><div className="grid grid-cols-2 gap-4">{[['رقم الحجز',detB.id],['الحالة',(STATUS_MAP[detB.status] && STATUS_MAP[detB.status].label)],['البرنامج',detB.title],['نوع النشاط',detB.type],['الأولوية',detB.priority],['الإدارة',detB.department],['القسم',detB.section],['الجهة المنظمة',detB.organizer],['مقدم الطلب',detB.requester],['الجوال',detB.phone],['البريد',detB.email],['القاعة',(function(){var _h=halls.find(function(h){return h.id===detB.hallId;});return _h ? _h.name : '-';})()],['التاريخ',detB.date],['الوقت',detB.startTime+' - '+detB.endTime],['الحضور',detB.attendees],['الضيافة',detB.hospitality],['تاريخ الإنشاء',detB.createdAt]].map(function(pair){return(<div key={pair[0]}><span className="text-slate-400">{pair[0]}:</span><br/><span className="font-medium text-slate-700">{pair[1]||'-'}</span></div>);})}</div>{detB.equipment && detB.equipment.length>0&&<div><span className="text-slate-400">الاحتياجات الفنية:</span><br/><div className="flex flex-wrap gap-1 mt-1">{detB.equipment.map(function(e){return <span key={e} className="px-2 py-0.5 bg-sky-50 text-sky-700 rounded-lg text-xs">{e}</span>;})}</div></div>}{detB.notes&&<div><span className="text-slate-400">ملاحظات:</span><br/><span className="text-slate-700">{detB.notes}</span></div>}{detB.rejectionReason&&<div className="p-3 bg-red-50 rounded-xl"><span className="text-red-600 font-medium">سبب الرفض:</span> {detB.rejectionReason}</div>}</div>}</Modal>
+    </div>
+  );
+}
+
+// ============================================================
+// HALL MANAGEMENT
+// ============================================================
+function HallsPage() {
+  var ctx = useContext(AppCtx); var cu = ctx.currentUser;
+  var _s1 = useState(ld('halls',HALLS_DEFAULT)); var halls2 = _s1[0]; var setHalls = _s1[1];
+  var _s2 = useState(null); var edit = _s2[0]; var setEdit = _s2[1];
+  var _s3 = useState(false); var add = _s3[0]; var setAdd = _s3[1];
+  var _s4 = useState({name:'',building:'',floor:'',capacity:'',equipment:[],available:true}); var fm = _s4[0]; var setFm = _s4[1];
+  var ref=function(){setHalls(ld('halls',HALLS_DEFAULT));};
+  var openE=function(h){setFm(Object.assign({},h));setEdit(h);};
+  var openA=function(){setFm({name:'',building:'',floor:'',capacity:'',equipment:[],available:true});setAdd(true);};
+  var togE=function(item){setFm(function(p){var eq=p.equipment?p.equipment.slice():[];var idx=eq.indexOf(item);if(idx!==-1)eq.splice(idx,1);else eq.push(item);return Object.assign({},p,{equipment:eq});});};
+  var saveH=function(){var all=ld('halls',HALLS_DEFAULT);if(edit){var i=all.findIndex(function(h){return h.id===edit.id;});if(i!==-1)all[i]=Object.assign({},all[i],fm);addLog('تعديل','-',cu.name,cu.role,'تعديل القاعة: '+fm.name);}else{all.push(Object.assign({},fm,{id:'H'+(all.length+1),capacity:parseInt(fm.capacity)||0}));addLog('إنشاء','-',cu.name,cu.role,'إضافة قاعة: '+fm.name);}sv('halls',all);setEdit(null);setAdd(false);ref();};
+  var bks=ld('bookings',[]);
+  var eqI={'شاشة عرض':'🖥️','بروجكتور':'📽️','أجهزة صوت':'🔊','اتصال مرئي':'📹','سبورة ذكية':'📋','لابتوب':'💻'};
+  return (
+    <div className="space-y-6 slide-up">
+      <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-slate-800">إدارة القاعات</h2><button onClick={openA} className="btn-primary flex items-center gap-2">{I.plus('#fff')} إضافة قاعة</button></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{halls2.map(function(h){var hb=bks.filter(function(b){return b.hallId===h.id&&b.status==='approved'&&b.date>='2026-07-08';});return(<div key={h.id} className="bg-white rounded-2xl border border-slate-100 p-5 card-hover"><div className="gradient-bar mb-3" style={{width:'100%'}}></div><div className="flex items-start justify-between mb-3"><h4 className="text-base font-bold text-slate-800">{h.name}</h4><span className={"px-2 py-0.5 rounded-full text-xs font-medium " + (h.available?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-700')}>{h.available?'متاحة':'صيانة'}</span></div><div className="space-y-2 text-sm text-slate-500 mb-3"><p>📍 {h.building} - {h.floor}</p><p>👥 السعة: {h.capacity} شخص</p></div><div className="flex flex-wrap gap-1 mb-3">{h.equipment.map(function(eq){return <span key={eq} className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs">{eqI[eq]||'⚙️'} {eq}</span>;})}</div><div className="text-xs text-slate-400 mb-3">الحجوزات القادمة: {hb.length}</div><button onClick={function(){openE(h);}} className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors">تعديل</button></div>);})}</div>
+      <Modal isOpen={!!edit||add} onClose={function(){setEdit(null);setAdd(false);}} title={edit?'تعديل القاعة':'إضافة قاعة جديدة'}><div className="space-y-4"><div><label className="block text-sm font-medium text-slate-600 mb-1.5">اسم القاعة</label><input type="text" value={fm.name} onChange={function(e){setFm(Object.assign({},fm,{name:e.target.value}));}} className="input-modern w-full"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-600 mb-1.5">المبنى</label><input type="text" value={fm.building} onChange={function(e){setFm(Object.assign({},fm,{building:e.target.value}));}} className="input-modern w-full"/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">الدور</label><input type="text" value={fm.floor} onChange={function(e){setFm(Object.assign({},fm,{floor:e.target.value}));}} className="input-modern w-full"/></div></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">السعة</label><input type="number" value={fm.capacity} onChange={function(e){setFm(Object.assign({},fm,{capacity:e.target.value}));}} className="input-modern w-full"/></div><div><label className="block text-sm font-medium text-slate-600 mb-2">التجهيزات</label><div className="flex flex-wrap gap-2">{EQUIPMENT_LIST.map(function(eq){return <label key={eq} className={"flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border cursor-pointer text-xs transition-all " + ((fm.equipment && fm.equipment.indexOf(eq)!==-1)?'bg-primary-50 border-primary-200 text-primary-700':'border-slate-200 text-slate-500')}><input type="checkbox" checked={fm.equipment && fm.equipment.indexOf(eq)!==-1} onChange={function(){togE(eq);}} className="w-3.5 h-3.5"/>{eq}</label>;})}</div></div><div className="flex items-center gap-2"><input type="checkbox" checked={fm.available} onChange={function(e){setFm(Object.assign({},fm,{available:e.target.checked}));}} className="w-4 h-4"/><label className="text-sm text-slate-600">متاحة للحجز</label></div><div className="flex gap-3 justify-end pt-2"><button onClick={function(){setEdit(null);setAdd(false);}} className="px-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button><button onClick={saveH} className="btn-primary">حفظ</button></div></div></Modal>
+    </div>
+  );
+}
+
+// ============================================================
+// REPORTS
+// ============================================================
+function ReportsPage() {
+  var bks=ld('bookings',[]);var halls=ld('halls',HALLS_DEFAULT);
+  var _s1=useState({df:'',dt:'',st:'الكل',dp:'الكل',hl:'الكل',tp:'الكل',org:''});var fl=_s1[0];var setFl=_s1[1];
+  var _s2=useState('date');var sc=_s2[0];var setSc=_s2[1];
+  var _s3=useState('desc');var sd=_s3[0];var setSd=_s3[1];
+  var flt=bks.filter(function(b){if(fl.df&&b.date<fl.df)return false;if(fl.dt&&b.date>fl.dt)return false;if(fl.st!=='الكل'){var m=Object.entries(STATUS_MAP).find(function(e){return e[1].label===fl.st;});if(m&&b.status!==m[0])return false;}if(fl.dp!=='الكل'&&b.department!==fl.dp)return false;if(fl.hl!=='الكل'&&b.hallId!==fl.hl)return false;if(fl.tp!=='الكل'&&b.type!==fl.tp)return false;if(fl.org&&b.organizer.indexOf(fl.org)===-1&&b.requester.indexOf(fl.org)===-1)return false;return true;}).sort(function(a,b){var d=sd==='asc'?1:-1;if(sc==='date')return a.date.localeCompare(b.date)*d;if(sc==='title')return a.title.localeCompare(b.title)*d;return 0;});
+  var ss={total:flt.length,approved:flt.filter(function(b){return b.status==='approved';}).length,pending:flt.filter(function(b){return b.status==='pending'||b.status==='new';}).length,rejected:flt.filter(function(b){return b.status==='rejected';}).length};
+  var hs=function(c){if(sc===c)setSd(function(d){return d==='asc'?'desc':'asc';});else{setSc(c);setSd('asc');}};
+  return (
+    <div className="space-y-6 slide-up">
+      <div className="bg-white rounded-2xl border border-slate-100 p-5"><div className="gradient-bar mb-4" style={{width:'100%'}}></div><h3 className="text-sm font-bold text-slate-700 mb-3">فلترة التقارير</h3><div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3"><div><label className="text-xs text-slate-400">من تاريخ</label><input type="date" value={fl.df} onChange={function(e){setFl(Object.assign({},fl,{df:e.target.value}));}} className="input-modern w-full text-xs"/></div><div><label className="text-xs text-slate-400">إلى تاريخ</label><input type="date" value={fl.dt} onChange={function(e){setFl(Object.assign({},fl,{dt:e.target.value}));}} className="input-modern w-full text-xs"/></div><div><label className="text-xs text-slate-400">الحالة</label><select value={fl.st} onChange={function(e){setFl(Object.assign({},fl,{st:e.target.value}));}} className="input-modern w-full text-xs bg-white"><option>الكل</option>{Object.values(STATUS_MAP).map(function(s){return <option key={s.label}>{s.label}</option>;})}</select></div><div><label className="text-xs text-slate-400">الإدارة</label><select value={fl.dp} onChange={function(e){setFl(Object.assign({},fl,{dp:e.target.value}));}} className="input-modern w-full text-xs bg-white"><option value="الكل">الكل</option>{getAllDeptNames().map(function(d){return <option key={d}>{d}</option>;})}</select></div><div><label className="text-xs text-slate-400">القاعة</label><select value={fl.hl} onChange={function(e){setFl(Object.assign({},fl,{hl:e.target.value}));}} className="input-modern w-full text-xs bg-white"><option value="الكل">الكل</option>{halls.map(function(h){return <option key={h.id} value={h.id}>{h.name}</option>;})}</select></div><div><label className="text-xs text-slate-400">نوع النشاط</label><select value={fl.tp} onChange={function(e){setFl(Object.assign({},fl,{tp:e.target.value}));}} className="input-modern w-full text-xs bg-white"><option value="الكل">الكل</option>{ACTIVITY_TYPES.map(function(t){return <option key={t}>{t}</option>;})}</select></div><div><label className="text-xs text-slate-400">المنظم</label><input type="text" value={fl.org} onChange={function(e){setFl(Object.assign({},fl,{org:e.target.value}));}} placeholder="بحث..." className="input-modern w-full text-xs"/></div></div></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[{l:'إجمالي النتائج',v:ss.total,c:'text-primary-700'},{l:'معتمدة',v:ss.approved,c:'text-emerald-600'},{l:'معلقة',v:ss.pending,c:'text-amber-600'},{l:'مرفوضة',v:ss.rejected,c:'text-red-600'}].map(function(s){return(<div key={s.l} className="bg-white rounded-2xl border border-slate-100 p-4 text-center card-hover"><p className="text-xs text-slate-400">{s.l}</p><p className={"text-2xl font-bold " + s.c}>{s.v}</p></div>);})}</div>
+      <div className="flex gap-2"><button onClick={function(){window.print();}} className="btn-primary flex items-center gap-1 text-xs">{I.dl()} طباعة / PDF</button></div>
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden"><div className="gradient-bar" style={{width:'100%'}}></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 border-b border-slate-100">{[['id','الرقم'],['title','البرنامج'],['type','النوع'],['date','التاريخ'],['time','الوقت'],['hall','القاعة'],['dept','الإدارة'],['status','الحالة'],['reason','سبب الرفض']].map(function(pair){return(<th key={pair[0]} onClick={function(){if(['date','title'].indexOf(pair[0])!==-1)hs(pair[0]);}} className={"text-right py-3 px-3 font-semibold text-slate-500 text-xs whitespace-nowrap " + (['date','title'].indexOf(pair[0])!==-1?'cursor-pointer hover:text-primary-700':'')}>{pair[1]} {sc===pair[0]?(sd==='asc'?'↑':'↓'):''}</th>);})}</tr></thead><tbody>{flt.map(function(b,i){return(<tr key={b.id} className={"border-b border-slate-50 hover:bg-slate-50/50 transition-colors " + (i%2?'bg-slate-50/30':'')}><td className="py-2.5 px-3 font-mono text-xs text-primary-700 font-semibold">{b.id}</td><td className="py-2.5 px-3 text-slate-700 text-xs max-w-[180px] truncate">{b.title}</td><td className="py-2.5 px-3 text-slate-500 text-xs">{b.type}</td><td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{b.date}</td><td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{b.startTime}-{b.endTime}</td><td className="py-2.5 px-3 text-slate-500 text-xs">{(function(){var _h=halls.find(function(h){return h.id===b.hallId;});return _h && _h.name ? _h.name.replace('قاعة ','') : '-';})()}</td><td className="py-2.5 px-3 text-slate-500 text-xs max-w-[100px] truncate">{b.department}</td><td className="py-2.5 px-3"><span className={"px-2 py-0.5 rounded-full text-xs font-medium " + ((STATUS_MAP[b.status] && STATUS_MAP[b.status].color) || '')}>{(STATUS_MAP[b.status] && STATUS_MAP[b.status].label) || b.status}</span></td><td className="py-2.5 px-3 text-red-500 text-xs max-w-[120px] truncate">{b.rejectionReason||'-'}</td></tr>);})}</tbody></table></div></div>
+    </div>
+  );
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+function AuditLogPage() {
+  var _s1=useState(ld('auditLog',[]));var logs=_s1[0];
+  var _s2=useState(1);var pg=_s2[0];var setPg=_s2[1];
+  var _s3=useState('الكل');var aF=_s3[0];var setAF=_s3[1];
+  var _s4=useState('');var srch=_s4[0];var setSrch=_s4[1];
+  var _s5=useState('');var df=_s5[0];var setDf=_s5[1];
+  var _s6=useState('');var dt=_s6[0];var setDt=_s6[1];
+  var pp=10;
+  var ac={'إنشاء':'bg-emerald-50 text-emerald-700','تعديل':'bg-sky-50 text-sky-700','اعتماد':'bg-emerald-50 text-emerald-700','مراجعة':'bg-sky-50 text-sky-700','رفض':'bg-red-50 text-red-700','إلغاء':'bg-gray-100 text-gray-600','تسجيل دخول':'bg-violet-50 text-violet-700','تسجيل خروج':'bg-violet-50 text-violet-700','تغيير صلاحيات':'bg-amber-50 text-amber-700','إعداد':'bg-sky-50 text-sky-700'};
+  var flt=logs.filter(function(l){if(aF!=='الكل'&&l.action!==aF)return false;if(srch&&l.user.indexOf(srch)===-1&&l.bookingId.indexOf(srch)===-1&&l.details.indexOf(srch)===-1)return false;if(df&&l.timestamp<df)return false;if(dt&&l.timestamp>dt+' 23:59')return false;return true;}).sort(function(a,b){return b.timestamp.localeCompare(a.timestamp);});
+  var tp=Math.ceil(flt.length/pp);var pgd=flt.slice((pg-1)*pp,pg*pp);
+  return (
+    <div className="space-y-6 slide-up">
+      <div className="bg-white rounded-2xl border border-slate-100 p-4"><div className="grid grid-cols-1 md:grid-cols-4 gap-3"><div className="relative"><span className="absolute right-3 top-2.5 text-slate-400">{I.srch()}</span><input type="text" value={srch} onChange={function(e){setSrch(e.target.value);setPg(1);}} placeholder="بحث..." className="input-modern w-full pr-10"/></div><select value={aF} onChange={function(e){setAF(e.target.value);setPg(1);}} className="input-modern bg-white"><option>الكل</option>{Object.keys(ac).map(function(a){return <option key={a}>{a}</option>;})}</select><input type="date" value={df} onChange={function(e){setDf(e.target.value);setPg(1);}} className="input-modern"/><input type="date" value={dt} onChange={function(e){setDt(e.target.value);setPg(1);}} className="input-modern"/></div></div>
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden"><div className="gradient-bar" style={{width:'100%'}}></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 border-b border-slate-100">{['#','التاريخ والوقت','نوع العملية','رقم الحجز','المستخدم','الدور','التفاصيل','عنوان IP'].map(function(h){return <th key={h} className="text-right py-3 px-3 font-semibold text-slate-500 text-xs whitespace-nowrap">{h}</th>;})}</tr></thead><tbody>{pgd.map(function(l,i){return(<tr key={l.id+'-'+i} className={"border-b border-slate-50 hover:bg-slate-50/50 transition-colors " + (i%2?'bg-slate-50/30':'')}><td className="py-2.5 px-3 text-slate-400 text-xs">{(pg-1)*pp+i+1}</td><td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{l.timestamp}</td><td className="py-2.5 px-3"><span className={"px-2 py-0.5 rounded-full text-xs font-medium " + (ac[l.action]||'bg-slate-100 text-slate-600')}>{l.action}</span></td><td className="py-2.5 px-3 font-mono text-xs text-primary-700 font-semibold">{l.bookingId}</td><td className="py-2.5 px-3 text-slate-700 text-xs">{l.user}</td><td className="py-2.5 px-3 text-slate-400 text-xs">{l.role}</td><td className="py-2.5 px-3 text-slate-500 text-xs max-w-[220px] truncate">{l.details}</td><td className="py-2.5 px-3 text-slate-400 text-xs font-mono">{l.ip}</td></tr>);})}</tbody></table></div>
+        {tp>1&&<div className="flex items-center justify-between p-4 border-t border-slate-100"><span className="text-xs text-slate-400">عرض {(pg-1)*pp+1} - {Math.min(pg*pp,flt.length)} من {flt.length}</span><div className="flex gap-1">{Array.from({length:Math.min(5,tp)},function(_,i){var p=Math.max(1,Math.min(pg-2,tp-4))+i;if(p>tp)return null;return<button key={p} onClick={function(){setPg(p);}} className={"px-3 py-1 rounded-xl text-xs transition-colors " + (p===pg?'bg-primary-700 text-white':'border border-slate-200 hover:bg-slate-50')}>{p}</button>;})}</div></div>}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// USER MANAGEMENT
+// ============================================================
+function UsersPage() {
+  var ctx = useContext(AppCtx); var cu = ctx.currentUser;
+  var _s1 = useState(ld('users',[])); var users = _s1[0]; var setUsers = _s1[1];
+  var _s2 = useState(null); var edit = _s2[0]; var setEdit = _s2[1];
+  var _s3 = useState(false); var add = _s3[0]; var setAdd = _s3[1];
+  var _s4 = useState({name:'',username:'',password:'',role:'مقدم الطلب',department:'',email:'',active:true}); var fm = _s4[0]; var setFm = _s4[1];
+  var ref=function(){setUsers(ld('users',[]));};
+  var openE=function(u){setFm(Object.assign({},u));setEdit(u);};
+  var openA=function(){setFm({name:'',username:'',password:'',role:'مقدم الطلب',department:'',email:'',active:true});setAdd(true);};
+  var saveU=function(){var all=ld('users',[]);if(edit){var i=all.findIndex(function(u){return u.id===edit.id;});if(i!==-1)all[i]=Object.assign({},all[i],fm);addLog('تعديل','-',cu.name,cu.role,'تعديل المستخدم: '+fm.name);}else{all.push(Object.assign({},fm,{id:'U'+(all.length+1),lastLogin:'-'}));addLog('إنشاء','-',cu.name,cu.role,'إضافة مستخدم: '+fm.name);}sv('users',all);setEdit(null);setAdd(false);ref();};
+  return (
+    <div className="space-y-6 slide-up">
+      <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-slate-800">إدارة المستخدمين</h2><button onClick={openA} className="btn-primary flex items-center gap-2">{I.plus('#fff')} إضافة مستخدم</button></div>
+      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden"><div className="gradient-bar" style={{width:'100%'}}></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-slate-50/80 border-b border-slate-100">{['الاسم','اسم المستخدم','الدور','الإدارة','البريد','الحالة','آخر دخول','إجراءات'].map(function(h){return <th key={h} className="text-right py-3 px-3 font-semibold text-slate-500 text-xs whitespace-nowrap">{h}</th>;})}</tr></thead><tbody>{users.map(function(u,i){return(<tr key={u.id} className={"border-b border-slate-50 hover:bg-slate-50/50 transition-colors " + (i%2?'bg-slate-50/30':'')}><td className="py-2.5 px-3 font-medium text-slate-700">{u.name}</td><td className="py-2.5 px-3 font-mono text-xs text-slate-500">{u.username}</td><td className="py-2.5 px-3"><span className="px-2 py-0.5 bg-primary-50 text-primary-700 rounded-full text-xs font-medium">{u.role}</span></td><td className="py-2.5 px-3 text-slate-500 text-xs">{u.department}</td><td className="py-2.5 px-3 text-slate-400 text-xs">{u.email}</td><td className="py-2.5 px-3"><span className={"px-2 py-0.5 rounded-full text-xs font-medium " + (u.active?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-700')}>{u.active?'نشط':'معطل'}</span></td><td className="py-2.5 px-3 text-slate-400 text-xs">{u.lastLogin}</td><td className="py-2.5 px-3"><button onClick={function(){openE(u);}} className="px-3 py-1 border border-slate-200 rounded-xl text-xs text-slate-500 hover:bg-slate-50 transition-colors">تعديل</button></td></tr>);})}</tbody></table></div></div>
+      <Modal isOpen={!!edit||add} onClose={function(){setEdit(null);setAdd(false);}} title={edit?'تعديل المستخدم':'إضافة مستخدم جديد'}><div className="space-y-4"><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-600 mb-1.5">الاسم</label><input type="text" value={fm.name} onChange={function(e){setFm(Object.assign({},fm,{name:e.target.value}));}} className="input-modern w-full"/></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">اسم المستخدم</label><input type="text" value={fm.username} onChange={function(e){setFm(Object.assign({},fm,{username:e.target.value}));}} className="input-modern w-full"/></div></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">كلمة المرور</label><input type="password" value={fm.password} onChange={function(e){setFm(Object.assign({},fm,{password:e.target.value}));}} className="input-modern w-full"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-slate-600 mb-1.5">الدور</label><select value={fm.role} onChange={function(e){setFm(Object.assign({},fm,{role:e.target.value}));}} className="input-modern w-full bg-white">{ROLES.map(function(r){return <option key={r}>{r}</option>;})}</select></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">الإدارة</label><select value={fm.department} onChange={function(e){setFm(Object.assign({},fm,{department:e.target.value}));}} className="input-modern w-full bg-white"><option value="">اختر</option>{getAllDeptNames().map(function(d){return <option key={d}>{d}</option>;})}</select></div></div><div><label className="block text-sm font-medium text-slate-600 mb-1.5">البريد الإلكتروني</label><input type="email" value={fm.email} onChange={function(e){setFm(Object.assign({},fm,{email:e.target.value}));}} className="input-modern w-full"/></div><div className="flex items-center gap-2"><input type="checkbox" checked={fm.active} onChange={function(e){setFm(Object.assign({},fm,{active:e.target.checked}));}} className="w-4 h-4"/><label className="text-sm text-slate-600">حساب نشط</label></div><div className="flex gap-3 justify-end pt-2"><button onClick={function(){setEdit(null);setAdd(false);}} className="px-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button><button onClick={saveU} className="btn-primary">حفظ</button></div></div></Modal>
+    </div>
+  );
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function SettingsPage() {
+  var ctx = useContext(AppCtx); var cu = ctx.currentUser;
+  var _s1 = useState('general'); var tab = _s1[0]; var setTab = _s1[1];
+  var _s2 = useState(ld('settings',{})); var st = _s2[0]; var setSt = _s2[1];
+  var _s3 = useState(''); var ni = _s3[0]; var setNi = _s3[1];
+  var tabs=[{id:'general',l:'عام'},{id:'halls',l:'القاعات'},{id:'departments',l:'الإدارات'},{id:'activityTypes',l:'أنواع الأنشطة'},{id:'rejectionReasons',l:'أسباب الرفض'},{id:'roles',l:'الصلاحيات'},{id:'backup',l:'النسخ الاحتياطي'}];
+  var addI=function(k){if(!ni.trim())return;var s=Object.assign({},st);if(!s[k])s[k]=[];s[k]=s[k].slice();s[k].push(ni.trim());sv('settings',s);setSt(s);setNi('');};
+  var remI=function(k,i){var s=Object.assign({},st);s[k]=s[k].slice();s[k].splice(i,1);sv('settings',s);setSt(s);};
+  var exp=function(){var d={};['users','bookings','halls','auditLog','notifications','settings'].forEach(function(k){d[k]=ld(k,[]);});var b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='mch-backup-'+new Date().toISOString().split('T')[0]+'.json';a.click();URL.revokeObjectURL(u);addLog('تعديل','-',cu.name,cu.role,'تصدير نسخة احتياطية');};
+  var imp=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){try{var d=JSON.parse(ev.target.result);Object.keys(d).forEach(function(k){sv(k,d[k]);});setSt(ld('settings',{}));addLog('تعديل','-',cu.name,cu.role,'استيراد نسخة احتياطية');alert('تم استيراد البيانات بنجاح');}catch(err){alert('خطأ في قراءة الملف');}};r.readAsText(f);};
+  var listEd=function(k,l){var items=st[k]||[];return(<div className="space-y-4"><h3 className="text-base font-bold text-slate-800">{l}</h3><div className="flex gap-2"><input type="text" value={ni} onChange={function(e){setNi(e.target.value);}} placeholder={'إضافة '+l+' جديد...'} className="input-modern flex-1"/><button onClick={function(){addI(k);}} className="btn-primary">إضافة</button></div><div className="space-y-2">{items.map(function(item,i){return(<div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"><span className="text-sm text-slate-700">{item}</span><button onClick={function(){remI(k,i);}} className="text-red-500 hover:text-red-700 text-xs">حذف</button></div>);})}</div></div>);};
+  return (
+    <div className="space-y-6 slide-up"><div className="bg-white rounded-2xl border border-slate-100">
+      <div className="gradient-bar" style={{width:'100%'}}></div>
+      <div className="flex flex-wrap border-b border-slate-100 px-4">{tabs.map(function(t){return(<button key={t.id} onClick={function(){setTab(t.id);}} className={"px-4 py-3 text-sm font-medium border-b-2 transition-colors " + (tab===t.id?'border-primary-600 text-primary-700':'border-transparent text-slate-400 hover:text-slate-600')}>{t.l}</button>);})}</div>
+      <div className="p-6">
+        {tab==='general'&&<div className="space-y-4"><h3 className="text-base font-bold text-slate-800">معلومات النظام</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{[['اسم النظام',st.systemName||'نظام إدارة حجوزات القاعات'],['المستشفى',st.hospitalName||'مستشفى الولادة والأطفال - حفر الباطن'],['الإصدار','2.0.0'],['آخر تحديث','2026-07-08']].map(function(pair){return(<div key={pair[0]} className="p-4 bg-slate-50 rounded-xl border border-slate-100"><p className="text-xs text-slate-400">{pair[0]}</p><p className="text-sm font-semibold text-slate-800 mt-1">{pair[1]}</p></div>);})}</div></div>}
+        {tab==='halls'&&<div className="space-y-3"><h3 className="text-base font-bold text-slate-800">إدارة القاعات</h3><p className="text-sm text-slate-400">يمكنك إدارة القاعات من صفحة "إدارة القاعات" في القائمة الجانبية.</p><div className="space-y-2">{ld('halls',HALLS_DEFAULT).map(function(h){return(<div key={h.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between"><div><span className="text-sm font-medium text-slate-700">{h.name}</span><span className="text-xs text-slate-400 mr-2">({h.building} - {h.floor} - سعة {h.capacity})</span></div><span className={"px-2 py-0.5 rounded-full text-xs " + (h.available?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-700')}>{h.available?'متاحة':'صيانة'}</span></div>);})}</div></div>}
+        {tab==='departments'&&<div className="space-y-6"><h3 className="text-base font-bold text-slate-800">الهيكل التنظيمي الرسمي</h3><p className="text-xs text-slate-400 mb-3">الإدارات والأقسام حسب الهيكل التنظيمي المعتمد 2025</p>{ORG_STRUCTURE.map(function(g){return(<div key={g.group} className="mb-4"><div className="p-3 bg-primary-50 rounded-xl border border-primary-100 mb-2"><span className="text-sm font-bold text-primary-800">▸ {g.group}</span><span className="text-xs text-primary-600 mr-2">({g.departments.length} إدارة)</span></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pr-4">{g.departments.map(function(d){return(<div key={d.name} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100"><div className="flex items-center justify-between"><span className="text-sm text-slate-700 font-medium">{d.name}</span>{d.sections.length>0&&<span className="text-xs bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full">{d.sections.length} أقسام</span>}</div>{d.sections.length>0&&<div className="mt-1.5 flex flex-wrap gap-1">{d.sections.map(function(s){return <span key={s} className="text-xs bg-white text-slate-500 px-2 py-0.5 rounded-lg border border-slate-100">{s}</span>;})}</div>}</div>);})}</div></div>);})}<div className="border-t border-slate-200 pt-4"><h4 className="text-sm font-bold text-slate-700 mb-3">إدارات مخصصة (إضافية)</h4><div className="flex gap-2 mb-3"><input type="text" value={ni} onChange={function(e){setNi(e.target.value);}} placeholder="إضافة إدارة مخصصة..." className="input-modern flex-1"/><button onClick={function(){if(!ni.trim())return;var s=Object.assign({},st);if(!s.customDepartments)s.customDepartments=[];s.customDepartments=s.customDepartments.slice();s.customDepartments.push(ni.trim());sv('settings',s);setSt(s);setNi('');addLog('إعداد','-',cu.name,cu.role,'إضافة إدارة مخصصة: '+ni.trim());}} className="btn-primary">إضافة</button></div>{(st.customDepartments||[]).length>0&&<div className="space-y-2">{(st.customDepartments||[]).map(function(cd,i){return(<div key={i} className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100"><span className="text-sm text-slate-700">{cd} <span className="text-xs text-amber-600">(مخصصة)</span></span><button onClick={function(){var s=Object.assign({},st);s.customDepartments=s.customDepartments.slice();s.customDepartments.splice(i,1);sv('settings',s);setSt(s);addLog('إعداد','-',cu.name,cu.role,'حذف إدارة مخصصة: '+cd);}} className="text-red-500 hover:text-red-700 text-xs">حذف</button></div>);})}</div>}</div><div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100"><p className="text-xs text-slate-500">📊 إجمالي الإدارات: <span className="font-bold text-primary-700">{getAllDeptNames().length}</span> إدارة ({(st.customDepartments||[]).length} مخصصة)</p></div></div>}
+        {tab==='activityTypes'&&listEd('activityTypes','أنواع الأنشطة')}
+        {tab==='rejectionReasons'&&listEd('rejectionReasons','أسباب الرفض')}
+        {tab==='roles'&&<div className="space-y-3"><h3 className="text-base font-bold text-slate-800">الصلاحيات والأدوار</h3><div className="space-y-2">{ROLES.map(function(r,i){return(<div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3"><div className="w-8 h-8 bg-primary-50 text-primary-700 rounded-xl flex items-center justify-center text-xs font-bold">{i+1}</div><span className="text-sm font-medium text-slate-700">{r}</span></div>);})}</div></div>}
+        {tab==='backup'&&<div className="space-y-6"><h3 className="text-base font-bold text-slate-800">النسخ الاحتياطي واستعادة البيانات</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center"><div className="text-3xl mb-3">💾</div><h4 className="font-semibold text-slate-800 mb-2">تصدير البيانات</h4><p className="text-xs text-slate-400 mb-4">تحميل نسخة احتياطية بصيغة JSON</p><button onClick={exp} className="btn-primary">تصدير</button></div><div className="p-6 border-2 border-dashed border-slate-200 rounded-2xl text-center"><div className="text-3xl mb-3">📂</div><h4 className="font-semibold text-slate-800 mb-2">استيراد البيانات</h4><p className="text-xs text-slate-400 mb-4">استعادة البيانات من ملف JSON</p><label className="btn-primary inline-block cursor-pointer" style={{background:'linear-gradient(135deg, #166534, #16a34a)'}}>استيراد<input type="file" accept=".json" onChange={imp} className="hidden"/></label></div></div></div>}
+      </div>
+    </div></div>
+  );
+}
+
+// ============================================================
+// SIDEBAR (redesigned)
+// ============================================================
+function Sidebar({page, nav, user, onLogout, isOpen, onClose}) {
+  var bks=ld('bookings',[]);var pc=bks.filter(function(b){return b.status==='pending'||b.status==='new';}).length;
+  var _s1 = useState(0); var logoClicks = _s1[0]; var setLogoClicks = _s1[1];
+  var _s2 = useState(false); var showLogin = _s2[0]; var setShowLogin = _s2[1];
+  var handleLogoClick = function() {
+    var newCount = logoClicks + 1;
+    setLogoClicks(newCount);
+    if (newCount >= 5) { setShowLogin(true); setLogoClicks(0); }
+    setTimeout(function() { setLogoClicks(0); }, 3000);
+  };
+  var publicItems=[{id:'home',l:'الرئيسية',ic:I.dash,clr:'text-sky-400'},{id:'dashboard',l:'لوحة المعلومات',ic:I.chart,clr:'text-teal-400'},{id:'new-booking',l:'حجز جديد',ic:I.plus,clr:'text-emerald-400'},{id:'calendar',l:'التقويم',ic:I.cal,clr:'text-violet-400'},{id:'approved-bookings',l:'الحجوزات المعتمدة',ic:I.clip,clr:'text-amber-400'},{id:'search',l:'البحث عن قاعة',ic:I.srch,clr:'text-cyan-400'}];
+  var adminItems=[{id:'approvals',l:'الموافقات',ic:I.clip,badge:pc},{id:'halls',l:'القاعات',ic:I.bld},{id:'reports',l:'التقارير',ic:I.chart},{id:'audit-log',l:'سجل العمليات',ic:I.doc},{id:'users',l:'المستخدمين',ic:I.usr},{id:'settings',l:'الإعدادات',ic:I.cog}];
+  var ini=user && user.name ? user.name.split(' ').map(function(w){return w[0];}).join('').substring(0,2) : 'ز';
+  var renderItem=function(it){return(<button key={it.id} onClick={function(){nav(it.id);onClose();}} className={"w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm transition-all " + (page===it.id?'bg-white/10 text-white font-medium shadow-sm':'text-slate-400 hover:bg-white/5 hover:text-slate-200')}>{it.ic(page===it.id?'#fff':'#94a3b8')}<span>{it.l}</span>{it.badge>0&&<span className="mr-auto bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full pulse-badge">{it.badge}</span>}</button>);};
+  return (
+    <>{isOpen&&<div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose}></div>}
+    <aside className={"fixed top-0 right-0 h-full w-64 sidebar-gradient text-white z-50 transform transition-transform duration-300 lg:translate-x-0 " + (isOpen?'translate-x-0':'translate-x-full lg:translate-x-0') + " flex flex-col"}>
+      <div className="p-5 border-b border-white/10">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={handleLogoClick}>
+          <LogoSVG size={40} light />
+          <div><p className="text-xs font-semibold text-white leading-tight">نظام إدارة الحجوزات</p><p className="text-[10px] text-slate-400 leading-tight">Hall Booking System</p></div>
+        </div>
+        <button onClick={onClose} className="absolute top-4 left-4 lg:hidden text-slate-400 hover:text-white">{I.x()}</button>
+      </div>
+      <div className="p-4 border-b border-white/10"><div className="flex items-center gap-3"><div className={"w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold " + (user ? 'bg-gradient-to-br from-sky-400 to-blue-600' : 'bg-slate-600')}>{ini}</div><div><p className="text-sm font-medium text-white">{user && user.name ? user.name : 'زائر'}</p><p className="text-[10px] text-slate-400">{user && user.role ? user.role : 'وصول عام'}</p></div></div></div>
+      <nav className="flex-1 overflow-y-auto py-3 px-3">
+        <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">الخدمات</p>
+        {publicItems.map(renderItem)}
+        {user && <><div className="my-3 mx-3 border-t border-white/10"></div><p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-wider">الإدارة</p>{adminItems.map(renderItem)}</>}
+      </nav>
+      {user&&<div className="p-3 border-t border-white/10"><button onClick={onLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:bg-red-900/20 hover:text-red-400 transition-colors">{I.out('#94a3b8')}<span>تسجيل الخروج</span></button></div>}
+      <div className="p-4 border-t border-white/10 text-center"><p className="text-[10px] text-slate-500 leading-relaxed">مستشفى الولادة والأطفال – حفر الباطن</p><p className="text-[10px] text-slate-600">MCH – Hafr Al-Batin</p></div>
+    </aside>
+    <LoginModal isOpen={showLogin} onClose={function(){setShowLogin(false);}} />
+    </>
+  );
+}
+
+// ============================================================
+// HEADER (redesigned)
+// ============================================================
+function Header({title, onMenu, user, nav, sheetStatus, onRefreshSheet, onLogout}) {
+  var _s1 = useState(false); var showN = _s1[0]; var setShowN = _s1[1];
+  var notifs=ld('notifications',[]);var uc=notifs.filter(function(n){return !n.read;}).length;
+  var nRef=useRef(null);
+  useEffect(function(){var h=function(e){if(nRef.current&&!nRef.current.contains(e.target))setShowN(false);};document.addEventListener('mousedown',h);return function(){document.removeEventListener('mousedown',h);};},[]);
+  var markAll=function(){var n=ld('notifications',[]);n.forEach(function(x){x.read=true;});sv('notifications',n);setShowN(false);};
+  var nI={new:'🆕',conflict:'⚠️',review:'🔍',approved:'✅',rejected:'❌',cancelled:'🚫',reminder:'⏰',pending:'⏳',login:'🔑'};
+  return (
+    <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+      <div className="flex items-center gap-3">
+        <button onClick={onMenu} className="lg:hidden p-1 text-slate-500 hover:text-slate-700">{I.menu()}</button>
+        <div><h1 className="text-lg font-bold text-slate-800">{title}</h1><p className="text-[10px] text-slate-400 hidden md:block">الأربعاء 12 محرم 1448 — 8 يوليو 2026</p></div>
+      </div>
+      <div className="flex items-center gap-2 lg:gap-3">
+        {sheetStatus && onRefreshSheet && <SheetStatusIndicator sheetStatus={sheetStatus} onRefresh={onRefreshSheet} />}
+        <div className="relative" ref={nRef}><button onClick={function(){setShowN(!showN);}} className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">{I.bell()}{uc>0&&<span className="absolute -top-0.5 -left-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center pulse-badge">{uc}</span>}</button>
+          {showN&&<div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 slide-up max-h-96 overflow-y-auto"><div className="gradient-bar" style={{width:'100%'}}></div><div className="flex items-center justify-between p-3 border-b border-slate-100"><h4 className="text-sm font-bold text-slate-800">الإشعارات</h4><button onClick={markAll} className="text-xs text-primary-600 hover:text-primary-700 font-medium">تحديد الكل كمقروء</button></div><div className="divide-y divide-slate-50">{notifs.slice(0,10).map(function(n){return(<div key={n.id} className={"p-3 flex items-start gap-2 " + (n.read?'':'bg-sky-50/30')}><span className="text-sm mt-0.5">{nI[n.type]||'📌'}</span><div className="flex-1 min-w-0"><p className={"text-xs " + (n.read?'text-slate-400':'text-slate-700 font-medium')}>{n.message}</p><p className="text-[10px] text-slate-400 mt-1">{n.timestamp}</p></div>{!n.read&&<div className="w-2 h-2 bg-sky-500 rounded-full mt-1.5 flex-shrink-0"></div>}</div>);})}</div></div>}
+        </div>
+        {user ? <><span className="text-sm text-slate-600 hidden md:inline font-medium">{user.name}</span><button onClick={onLogout} className="px-3 py-1.5 bg-red-50 text-red-500 rounded-xl text-xs font-medium hover:bg-red-100 transition-colors">خروج</button></> : <button onClick={function(){nav('admin-login');}} className="px-3 py-1.5 bg-primary-50 text-primary-700 rounded-xl text-xs font-medium hover:bg-primary-100 transition-colors flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg><span className="hidden sm:inline">تسجيل الدخول</span></button>}
+      </div>
+    </header>
+  );
+}
+
+// ============================================================
+// SHEET STATUS INDICATOR
+// ============================================================
+function SheetStatusIndicator({ sheetStatus, onRefresh }) {
+  return (
+    <div className="flex items-center gap-2">
+      <button onClick={onRefresh} disabled={sheetStatus.loading} className={"px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all " + (sheetStatus.loading ? "bg-slate-50 text-slate-400 border-slate-200 cursor-wait" : "bg-primary-50 text-primary-700 border-primary-100 hover:bg-primary-100")} title="تحديث البيانات من Google Sheets">
+        {sheetStatus.loading ? (
+          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        ) : (
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        )}
+        <span className="hidden sm:inline">{sheetStatus.loading ? 'جاري التحديث...' : 'تحديث'}</span>
+      </button>
+      <div className={"flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium " + (sheetStatus.connected ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500")} title={sheetStatus.connected ? ("آخر تحديث: " + (sheetStatus.lastUpdate || '-')) : "غير متصل"}>
+        <span className={"w-2 h-2 rounded-full " + (sheetStatus.connected ? "bg-emerald-500" : "bg-red-500")}></span>
+        <span className="hidden md:inline">{sheetStatus.connected ? ("متصل " + (sheetStatus.lastUpdate ? "(" + sheetStatus.lastUpdate + ")" : "")) : "غير متصل"}</span>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// APP
+// ============================================================
+function App() {
+  var _s1 = useState(function() { try { var s = localStorage.getItem('mch_cu'); return s ? JSON.parse(s) : null; } catch(e) { return null; } }); var cu = _s1[0]; var setCu = _s1[1];
+  var _s2 = useState('home'); var pg = _s2[0]; var setPg = _s2[1];
+  var _s3 = useState(false); var sb = _s3[0]; var setSb = _s3[1];
+  var _s4 = useState({ connected: false, lastUpdate: null, loading: true }); var sheetStatus = _s4[0]; var setSheetStatus = _s4[1];
+  var _s5 = useState(false); var dataReady = _s5[0]; var setDataReady = _s5[1];
+  var _s6 = useState(false); var loginOpen = _s6[0]; var setLoginOpen = _s6[1];
+
+  var refreshFromSheet = function() {
+    setSheetStatus(function(prev) { return { connected: prev.connected, lastUpdate: prev.lastUpdate, loading: true }; });
+    initDataFromSheet().then(function() {
+      setSheetStatus({ connected: true, lastUpdate: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }), loading: false });
+      setDataReady(false); setTimeout(function() { setDataReady(true); }, 50);
+    }).catch(function() { setSheetStatus({ connected: false, lastUpdate: null, loading: false }); });
+  };
+
+  useEffect(function() {
+    initDataFromSheet().then(function() {
+      setSheetStatus({ connected: true, lastUpdate: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }), loading: false });
+      setDataReady(true);
+    }).catch(function() { setSheetStatus({ connected: false, lastUpdate: null, loading: false }); setDataReady(true); });
+  }, []);
+
+  var login = useCallback(function(u, rem) {
+    setCu(u);
+    if (rem) localStorage.setItem('mch_cu', JSON.stringify(u));
+    else sessionStorage.setItem('mch_cu', JSON.stringify(u));
+    var us = ld('users', []);
+    var i = us.findIndex(function(x) { return x.id === u.id; });
+    if (i !== -1) { us[i].lastLogin = new Date().toISOString().replace('T', ' ').substring(0, 16); sv('users', us); }
+    addLog('تسجيل دخول', '-', u.name, u.role, 'تسجيل دخول ناجح');
+    setPg('dashboard');
+  }, []);
+  var logout = useCallback(function() { if (cu) addLog('تسجيل خروج', '-', cu.name, cu.role, 'تسجيل خروج'); setCu(null); localStorage.removeItem('mch_cu'); sessionStorage.removeItem('mch_cu'); setPg('home'); }, [cu]);
+  var adminPages = ['approvals','halls','reports','audit-log','users','settings'];
+  var nav = useCallback(function(p) { if (p === 'admin-login') { setLoginOpen(true); return; } if (adminPages.indexOf(p) !== -1 && !cu) { setLoginOpen(true); return; } setPg(p); window.scrollTo(0, 0); }, [cu]);
+  useEffect(function() { if (!cu) { try { var s = sessionStorage.getItem('mch_cu'); if (s) setCu(JSON.parse(s)); } catch(e) {} } }, []);
+  var titles = { home: 'الرئيسية', dashboard: 'لوحة المعلومات', calendar: 'التقويم', 'new-booking': 'حجز جديد', 'approved-bookings': 'الحجوزات المعتمدة', search: 'البحث عن قاعة', approvals: 'الموافقات وإدارة الحجوزات', halls: 'إدارة القاعات', reports: 'التقارير', 'audit-log': 'سجل العمليات', users: 'إدارة المستخدمين', settings: 'الإعدادات' };
+
+  if (!dataReady) return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0c4a6e] via-[#075985] to-[#006272]">
+      <div className="text-center slide-up">
+        <div className="mx-auto mb-6"><LogoSVG size={80} light /></div>
+        <h2 className="text-white text-xl font-bold mb-1">نظام إدارة حجوزات القاعات</h2>
+        <p className="text-sky-200 text-sm mb-1">إدارة الشؤون الأكاديمية والتدريب والتعليم المستمر</p>
+        <p className="text-sky-300/60 text-xs mb-6">مستشفى الولادة والأطفال — حفر الباطن</p>
+        <div className="w-48 h-1 bg-white/20 rounded-full mx-auto overflow-hidden"><div className="progress-bar"></div></div>
+        <p className="text-sky-200/80 text-xs mt-4">جاري تحميل البيانات...</p>
+      </div>
+    </div>
+  );
+
+  var renderPg = function() { if (adminPages.indexOf(pg) !== -1 && !cu) { setTimeout(function(){setLoginOpen(true);},0); return <HomePage />; } switch (pg) { case 'home': return <HomePage />; case 'dashboard': return <DashboardPage />; case 'calendar': return <CalendarPage />; case 'new-booking': return <NewBookingPage />; case 'approved-bookings': return <ApprovedBookingsPage />; case 'search': return <SearchPage />; case 'approvals': return cu ? <ApprovalsPage /> : <HomePage />; case 'halls': return cu ? <HallsPage /> : <HomePage />; case 'reports': return cu ? <ReportsPage /> : <HomePage />; case 'audit-log': return cu ? <AuditLogPage /> : <HomePage />; case 'users': return cu ? <UsersPage /> : <HomePage />; case 'settings': return cu ? <SettingsPage /> : <HomePage />; default: return <HomePage />; } };
+  return (
+    <AppCtx.Provider value={{ currentUser: cu, login: login, logout: logout, nav: nav }}>
+      <div className="min-h-screen bg-slate-50">
+        <Sidebar page={pg} nav={nav} user={cu} onLogout={logout} isOpen={sb} onClose={function() { setSb(false); }} />
+        <div className="lg:mr-64">
+          <Header title={titles[pg] || 'الرئيسية'} onMenu={function() { setSb(true); }} user={cu} nav={nav} sheetStatus={sheetStatus} onRefreshSheet={refreshFromSheet} onLogout={logout} />
+          <main className="p-4 lg:p-6">{renderPg()}</main>
+          <LoginModal isOpen={loginOpen} onClose={function(){setLoginOpen(false);}} />
+        </div>
+      </div>
+    </AppCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
